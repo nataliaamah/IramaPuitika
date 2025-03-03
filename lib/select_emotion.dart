@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class SelectEmotionScreen extends StatefulWidget {
-
   const SelectEmotionScreen({super.key});
 
   @override
@@ -14,7 +13,6 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Emotion')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -28,13 +26,18 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
             ),
             const SizedBox(height: 10),
 
-            // Display Uploaded Image
+            // Display Uploaded Image (Placeholder Box)
             Container(
               width: 200,
               height: 150,
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey),
                 borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                "Image Here",
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
             ),
             const SizedBox(height: 10),
@@ -46,15 +49,15 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
             ),
             const SizedBox(height: 15),
 
-            // Emotion Selection Buttons
+            // Emotion Selection Buttons (Using Assets)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _emotionButton('Happy', Icons.sentiment_satisfied_alt, Colors.yellow),
+                _emotionButton('Happy', 'assets/images/happy.png', Colors.amber),
                 const SizedBox(width: 15),
-                _emotionButton('Anger', Icons.sentiment_dissatisfied, Colors.red),
+                _emotionButton('Angry', 'assets/images/angry.png', Colors.red),
                 const SizedBox(width: 15),
-                _emotionButton('Sad', Icons.sentiment_very_dissatisfied, Colors.blue),
+                _emotionButton('Sad', 'assets/images/sad.png', Colors.blue),
               ],
             ),
             const SizedBox(height: 30),
@@ -91,8 +94,8 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
     );
   }
 
-  /// Emotion Selection Button Widget
-  Widget _emotionButton(String emotion, IconData icon, Color color) {
+  /// Emotion Selection Button Widget (Uses Asset Images)
+  Widget _emotionButton(String emotion, String assetPath, Color color) {
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -105,16 +108,27 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _selectedEmotion == emotion ? color.withOpacity(0.6) : Colors.grey[200],
+              color: _selectedEmotion == emotion ? color.withOpacity(0.3) : Colors.grey[200], // ✅ Light highlight instead of removing image
               border: Border.all(
                 color: _selectedEmotion == emotion ? color : Colors.grey,
                 width: 2,
               ),
             ),
-            child: Icon(icon, size: 40, color: _selectedEmotion == emotion ? Colors.white : color),
+            child: Image.asset(
+              assetPath,
+              width: 50,
+              height: 50,
+            ),
           ),
           const SizedBox(height: 5),
-          Text(emotion, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          Text(
+            emotion,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: _selectedEmotion == emotion ? color : Colors.black, // ✅ Highlight text color if selected
+            ),
+          ),
         ],
       ),
     );
