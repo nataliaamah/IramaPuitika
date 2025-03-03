@@ -256,11 +256,13 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
                       ? () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => SelectEmotionScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => SelectEmotionScreen(keywords: _response),
+                      ),
                     );
                   }
-                      : null,
-                  child: Text('Next →', style: GoogleFonts.poppins(),),
+                      : null, // Disable button if no image is uploaded
+                  child: Text('Next →', style: GoogleFonts.poppins()),
                 ),
               ],
             ),

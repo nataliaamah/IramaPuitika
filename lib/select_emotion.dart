@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SelectEmotionScreen extends StatefulWidget {
-  const SelectEmotionScreen({super.key});
+  final String keywords; // Accept keywords as a parameter
+
+  const SelectEmotionScreen({super.key, required this.keywords});
 
   @override
   State<SelectEmotionScreen> createState() => _SelectEmotionScreenState();
@@ -66,9 +68,9 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
                 ElevatedButton(
                   onPressed: _selectedEmotion != null
                       ? () {
-                    // Navigate to the next step (Replace with your next screen)
+                    String receivedKeywords = widget.keywords;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Generating for $_selectedEmotion...')),
+                      SnackBar(content: Text('Generating for $_selectedEmotion and "$receivedKeywords"...')),
                     );
                   }
                       : null, // Disable button if no emotion is selected
