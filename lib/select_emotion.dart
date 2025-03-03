@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class SelectEmotionScreen extends StatefulWidget {
   const SelectEmotionScreen({super.key});
@@ -20,32 +21,19 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Step 2 Title
-            const Text(
-              'Step 2',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              'Step 2/2',
+              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
 
             // Display Uploaded Image (Placeholder Box)
-            Container(
-              width: 200,
-              height: 150,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              alignment: Alignment.center,
-              child: const Text(
-                "Image Here",
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ),
-            const SizedBox(height: 10),
+            Image.asset("assets/images/step_2.gif", height: 250, width: 200,),
 
             // Select Emotion Text
-            const Text(
+            Text(
               'Select Emotion',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 15),
 
@@ -123,7 +111,7 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
           const SizedBox(height: 5),
           Text(
             emotion,
-            style: TextStyle(
+            style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w500,
               color: _selectedEmotion == emotion ? color : Colors.black, // ✅ Highlight text color if selected

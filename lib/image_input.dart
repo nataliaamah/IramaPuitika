@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:dotted_border/dotted_border.dart';
 import 'select_emotion.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ImageInputScreen extends StatefulWidget {
   const ImageInputScreen({super.key});
@@ -172,26 +173,18 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Step 1 Title
-            const Text(
-              'Step 1',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              'Step 1/2',
+              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
 
             // Placeholder Image (Fixed Graphic)
-            Container(
-              width: 150,
-              height: 100,
-              color: Colors.grey[300],
-              alignment: Alignment.center,
-              child: const Text("Graphic Here", style: TextStyle(fontSize: 16)),
-            ),
-            const SizedBox(height: 15),
+            Image.asset("assets/images/step_1.gif", height: 250, width: 200,),
 
             // Upload Scenery Image Text
-            const Text(
+            Text(
               'Enter Scenery Image',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 10),
 
@@ -210,12 +203,12 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
                   alignment: Alignment.center,
                   child: _selectedImage != null
                       ? Image.file(_selectedImage!, fit: BoxFit.cover)
-                      : const Column(
+                      : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.upload, size: 40, color: Colors.black54),
-                      SizedBox(height: 5),
-                      Text('Tap to Upload', style: TextStyle(fontSize: 16)),
+                      const Icon(Icons.upload, size: 40, color: Colors.black54),
+                      const SizedBox(height: 5),
+                      Text('Tap to Upload', style: GoogleFonts.poppins(fontSize: 16)),
                     ],
                   ),
                 ),
@@ -225,9 +218,9 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
 
             // Gemini AI Response Section (Loading + Generated Keywords)
             if (_selectedImage != null) ...[
-              const Text(
+              Text(
                 'Gemini Generated Keywords:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 5),
               Container(
@@ -242,7 +235,7 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
                     : Text(
                   _response,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16),
+                  style: GoogleFonts.poppins(fontSize: 16),
                 ),
               ),
               const SizedBox(height: 20),
@@ -267,7 +260,7 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
                     );
                   }
                       : null,
-                  child: const Text('Next →'),
+                  child: Text('Next →', style: GoogleFonts.poppins(),),
                 ),
               ],
             ),
