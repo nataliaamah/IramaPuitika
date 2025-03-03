@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'image_input.dart';
+import 'onboarding_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomePage extends StatelessWidget {
@@ -66,7 +66,7 @@ class HomePage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ImageInputScreen()),
+                    MaterialPageRoute(builder: (context) => const OnboardingScreen()),
                   );
                 },
                 style: ElevatedButton.styleFrom(
