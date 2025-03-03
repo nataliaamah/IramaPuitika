@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dotted_border/dotted_border.dart';
+import 'select_emotion.dart';
 
 class ImageInputScreen extends StatefulWidget {
   const ImageInputScreen({super.key});
@@ -15,157 +16,148 @@ class ImageInputScreen extends StatefulWidget {
 class _ImageInputScreenState extends State<ImageInputScreen> {
   File? _selectedImage;
   String _response = 'No response yet.';
-  String _geminiVersion = 'Checking...';
-  int _usedTokens = 0;
-  final int _totalTokensAllowed = 2000000;
+  bool _isLoading = false; // Show a loading indicator
   final ImagePicker _picker = ImagePicker();
 
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM'; // Replace with your valid API key
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent';
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchGeminiVersion();
-    _loadTokenUsage();
+  /// Opens dialog to choose between Camera or Gallery
+  Future<void> _showImagePickerOptions() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera),
+                title: const Text('Take a Photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(fromCamera: true);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage(fromCamera: false);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  /// Loads previously used token count
-  Future<void> _loadTokenUsage() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _usedTokens = prefs.getInt('usedTokens') ?? 0;
-    });
-  }
-
-  /// Saves token count persistently
-  Future<void> _saveTokenUsage() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('usedTokens', _usedTokens);
-  }
-
-  /// Fetches the Gemini model version dynamically
-  Future<void> _fetchGeminiVersion() async {
+  /// Picks an image from gallery or camera
+  Future<void> _pickImage({bool fromCamera = false}) async {
     try {
-      final response = await http.get(
-        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro?key=$apiKey'),
+      final pickedFile = await _picker.pickImage(
+        source: fromCamera ? ImageSource.camera : ImageSource.gallery,
       );
 
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
+      if (pickedFile != null) {
+        if (_selectedImage?.path == pickedFile.path) {
+          setState(() {
+            _response = "This image has already been processed."; // Avoid duplicate API calls
+          });
+          return;
+        }
+
         setState(() {
-          _geminiVersion = result['name'] ?? 'Unknown Model';
+          _selectedImage = File(pickedFile.path);
+          _response = 'Processing...';
+          _isLoading = true; // Show loading indicator
         });
+
+        _uploadAndAnalyzeImage();
       } else {
         setState(() {
-          _geminiVersion = 'Error ${response.statusCode}: ${response.reasonPhrase}';
+          _response = "No image selected.";
         });
       }
     } catch (e) {
       setState(() {
-        _geminiVersion = 'Error: $e';
+        _response = "Error selecting image: $e";
       });
     }
   }
 
-  /// Handles image selection and sends request to Gemini API
+  /// Uploads and analyzes the image using Gemini API
   Future<void> _uploadAndAnalyzeImage() async {
     try {
-      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (_selectedImage == null) return;
 
-      if (pickedFile != null) {
-        setState(() {
-          _selectedImage = File(pickedFile.path);
-          _response = 'Processing...';
-        });
+      final imageBytes = await _selectedImage!.readAsBytes();
+      final base64Image = base64Encode(imageBytes);
 
-        final imageBytes = await _selectedImage!.readAsBytes();
-        final base64Image = base64Encode(imageBytes);
-
-        final requestBody = {
-          "contents": [
-            {
-              "parts": [
-                {"text": "Analyze this scene for emotions and context in keywords only."},
-                {
-                  "inlineData": {
-                    "mimeType": "image/jpeg",
-                    "data": base64Image,
-                  }
+      final requestBody = {
+        "contents": [
+          {
+            "parts": [
+              {"text": "Analyze this scene for emotions in keywords only."},
+              {
+                "inlineData": {
+                  "mimeType": "image/jpeg",
+                  "data": base64Image,
                 }
-              ]
-            }
-          ],
-          "generationConfig": {
-            "temperature": 0.7,
-            "topK": 40,
-            "topP": 0.95,
-            "maxOutputTokens": 512,
+              }
+            ]
           }
-        };
+        ],
+        "generationConfig": {
+          "temperature": 0.7,
+          "topK": 40,
+          "topP": 0.95,
+          "maxOutputTokens": 512,
+        }
+      };
 
-        final response = await http.post(
-          Uri.parse('$endpoint?key=$apiKey'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(requestBody),
-        );
+      final response = await http.post(
+        Uri.parse('$endpoint?key=$apiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
 
-        if (response.statusCode == 200) {
-          final result = jsonDecode(response.body);
-          print(result);
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
 
-          if (result.containsKey('usageMetadata') &&
-              result['usageMetadata'].containsKey('totalTokenCount')) {
-            setState(() {
-              _usedTokens += (result['usageMetadata']['totalTokenCount'] as int?) ?? 0;
-            });
-            _saveTokenUsage();
-          }
+        if (result['candidates'] != null &&
+            result['candidates'].isNotEmpty &&
+            result['candidates'][0]['content'] != null &&
+            result['candidates'][0]['content']['parts'] != null) {
+          final parts = result['candidates'][0]['content']['parts'] as List<dynamic>;
 
-          if (result.containsKey('usageMetadata') &&
-              result['usageMetadata'].containsKey('modelVersion')) {
-            setState(() {
-              _geminiVersion = result['usageMetadata']['modelVersion'];
-            });
-          }
+          final textResponse = parts
+              .where((part) => part['text'] != null && part['text'] is String)
+              .map((part) => part['text'] as String)
+              .join('\n');
 
-          if (result['candidates'] != null &&
-              result['candidates'].isNotEmpty &&
-              result['candidates'][0]['content'] != null &&
-              result['candidates'][0]['content']['parts'] != null) {
-            final parts = result['candidates'][0]['content']['parts'] as List<dynamic>;
-
-            final textResponse = parts
-                .where((part) => part['text'] != null && part['text'] is String)
-                .map((part) => part['text'] as String)
-                .join('\n');
-
-            setState(() {
-              _response = textResponse;
-            });
-          } else {
-            setState(() {
-              _response = 'No valid response received. Full response: $result';
-            });
-          }
-        } else if (response.statusCode == 429) {
           setState(() {
-            _response = 'Error: Too Many Requests. You have reached the rate limit. Try again later.';
-          });
-        } else if (response.statusCode == 403) {
-          setState(() {
-            _response = 'Error: Quota Exceeded. You have reached your daily or monthly limit.';
+            _response = textResponse;
+            _isLoading = false;
           });
         } else {
           setState(() {
-            _response = 'Error ${response.statusCode}: ${response.reasonPhrase}\n${response.body}';
+            _response = 'No valid response received.';
+            _isLoading = false;
           });
         }
+      } else {
+        setState(() {
+          _response = 'Error ${response.statusCode}: ${response.reasonPhrase}';
+          _isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {
         _response = 'Error: $e';
+        _isLoading = false;
       });
     }
   }
@@ -179,11 +171,106 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('Gemini Model: $_geminiVersion'),
-            Text('Tokens Used: $_usedTokens / $_totalTokensAllowed'),
-            if (_selectedImage != null) Image.file(_selectedImage!, height: 200, width: 200, fit: BoxFit.cover),
-            ElevatedButton(onPressed: _uploadAndAnalyzeImage, child: const Text('Upload and Analyze Image')),
-            Text(_response),
+            // Step 1 Title
+            const Text(
+              'Step 1',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+
+            // Placeholder Image (Fixed Graphic)
+            Container(
+              width: 150,
+              height: 100,
+              color: Colors.grey[300],
+              alignment: Alignment.center,
+              child: const Text("Graphic Here", style: TextStyle(fontSize: 16)),
+            ),
+            const SizedBox(height: 15),
+
+            // Upload Scenery Image Text
+            const Text(
+              'Enter Scenery Image',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 10),
+
+            // Dotted Border for Upload
+            GestureDetector(
+              onTap: _showImagePickerOptions,
+              child: DottedBorder(
+                color: Colors.grey, // Border color
+                strokeWidth: 2,
+                dashPattern: [6, 4], // Dotted pattern
+                borderType: BorderType.RRect,
+                radius: const Radius.circular(10),
+                child: Container(
+                  width: 200,
+                  height: 150,
+                  alignment: Alignment.center,
+                  child: _selectedImage != null
+                      ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                      : const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.upload, size: 40, color: Colors.black54),
+                      SizedBox(height: 5),
+                      Text('Tap to Upload', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Gemini AI Response Section (Loading + Generated Keywords)
+            if (_selectedImage != null) ...[
+              const Text(
+                'Gemini Generated Keywords:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 5),
+              Container(
+                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey[50], // Light background
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : Text(
+                  _response,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // Navigation Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                ElevatedButton(
+                  onPressed: _selectedImage != null
+                      ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SelectEmotionScreen()),
+                    );
+                  }
+                      : null, // Disabled if no image
+                  child: const Text('Next →'),
+                ),
+              ],
+            ),
           ],
         ),
       ),

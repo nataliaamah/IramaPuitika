@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'image_input.dart'; // Import the new file
+import 'home_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,9 +11,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Gemini Image Analysis',
+      title: 'Context-based Poetry Recommender System',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const ImageInputScreen(), // Use ImageInputScreen instead of HomeScreen
+      home: const HomePage(), // Set HomePage as the main screen
     );
   }
 }
