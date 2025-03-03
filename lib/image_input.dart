@@ -266,7 +266,7 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
                       MaterialPageRoute(builder: (context) => SelectEmotionScreen()),
                     );
                   }
-                      : null, // Disabled if no image
+                      : null,
                   child: const Text('Next →'),
                 ),
               ],

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'image_input.dart'; // Import the image processing screen
-import 'select_emotion.dart';
+import 'image_input.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -9,53 +9,60 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child:
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(height: 30,),
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Logo (Replace 'assets/logo.png' with actual logo path)
+            /*Image.asset(
+              'assets/logo.png',
+              width: 120,
+              height: 60,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 40),
+            */
+            // Welcome Message
+            Text(
+              'Welcome,',
+              style: GoogleFonts.poppins(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 20),
 
-              // Logo
-              Container(
-                width: 100,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Center(
-                  child: Text(
-                    'Logo',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            // Image Placeholder
+            Container(
+              width: 220,
+              height: 160,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                    offset: const Offset(2, 4),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(height: 90),
-
-              // Welcome Message
-              const Text(
-                'Welcome,',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              alignment: Alignment.center,
+              child: const Icon(
+                Icons.image,
+                size: 60,
+                color: Colors.grey,
               ),
-              const SizedBox(height: 50),
+            ),
+            const SizedBox(height: 50),
 
-              // Image Placeholder
-              Container(
-                width: 200,
-                height: 150,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.image, size: 50, color: Colors.grey),
-              ),
-              const SizedBox(height: 100),
-
-              // Generate Pantun Button
-              ElevatedButton(
+            // Generate Pantun Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -63,12 +70,28 @@ class HomePage extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  backgroundColor: Colors.blueAccent,
+                  elevation: 5,
+                  alignment: Alignment.center,
                 ),
-                child: const Text('Generate Pantun Recommendation'),
+                child: Center(
+                  child: Text(
+                    'Generate Pantun Recommendation',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
