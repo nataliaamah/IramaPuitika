@@ -34,3 +34,6 @@ flutter:
     - assets/images/sad.png
     - assets/images/step_1.gif
     - assets/images/step_2.gif
+    - assets/txt/joy-NRC-Emotion-Lexicon.txt
+    - assets/txt/sadness-NRC-Emotion-Lexicon.txt
+    - assets/txt/anger-NRC-Emotion-Lexicon.txt

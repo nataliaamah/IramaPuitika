@@ -1,11 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:dotted_border/dotted_border.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 import 'select_emotion.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -25,6 +25,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM';
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent';
+
+  // Emotion keywords loaded from the lexicon files
+  Set<String> joyKeywords = {};
+  Set<String> sadnessKeywords = {};
+  Set<String> angerKeywords = {};
+  Set<String> allEmotionKeywords = {};
+
+  @override
+  void initState() {
+    super.initState();
+    loadAllLexicons(); // Load emotion lexicons at startup
+  }
+
+  /// Load emotion keywords from lexicon text files in assets
+  Future<Set<String>> loadEmotionKeywords(String filePath) async {
+    final String content = await rootBundle.loadString(filePath);
+    return content
+        .split('\n')
+        .map((line) => line.trim().split(' ')[0].toLowerCase()) // Ignore the "1"
+        .toSet();
+  }
+
+  /// Load all lexicon files into memory
+  Future<void> loadAllLexicons() async {
+    joyKeywords = await loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
+    sadnessKeywords = await loadEmotionKeywords("assets/txt/sadness-NRC-Emotion-Lexicon.txt");
+    angerKeywords = await loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
+
+    // Combine all words into a single set
+    allEmotionKeywords = joyKeywords.union(sadnessKeywords).union(angerKeywords);
+  }
 
   /// Picks an image from gallery or camera
   Future<void> _pickImage({bool fromCamera = false}) async {
@@ -65,7 +96,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         "contents": [
           {
             "parts": [
-              {"text": "Analyze this scene and generate emotion-related keywords."},
+              {
+                "text": "Extract exactly 5-7 emotion-related keywords from the image. "
+                    "Only use words that match the provided lexicon lists. "
+                    "Do NOT include explanations, sentences, or additional text. "
+                    "Output format: ['keyword1', 'keyword2', 'keyword3', ...]."
+              },
               {
                 "inlineData": {
                   "mimeType": "image/jpeg",
@@ -76,10 +112,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           }
         ],
         "generationConfig": {
-          "temperature": 0.7,
+          "temperature": 0.5,
           "topK": 40,
-          "topP": 0.95,
-          "maxOutputTokens": 512,
+          "topP": 0.9,
+          "maxOutputTokens": 50
         }
       };
 
@@ -98,13 +134,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             result['candidates'][0]['content']['parts'] != null) {
           final parts = result['candidates'][0]['content']['parts'] as List<dynamic>;
 
-          final textResponse = parts
+          // Extract and clean keywords
+          String rawKeywords = parts
               .where((part) => part['text'] != null && part['text'] is String)
               .map((part) => part['text'] as String)
-              .join('\n');
+              .join(',');
+
+          List<String> extractedWords = rawKeywords.split(',').map((word) => word.trim().toLowerCase()).toList();
+
+          // Filter keywords against the lexicons
+          List<String> filteredKeywords = extractedWords.where((word) => allEmotionKeywords.contains(word)).toList();
+
+          // Limit to 5-7 keywords
+          filteredKeywords = filteredKeywords.take(7).toList();
 
           setState(() {
-            _keywords = textResponse;
+            _keywords = filteredKeywords.join(", ");
             _isLoading = false;
           });
         } else {
@@ -127,32 +172,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  /// Moves to the next page
-  void _nextPage() {
-    if (_pageController.page == 0 && _selectedImage != null) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  /// Moves to the previous page
-  void _previousPage() {
-    if (_pageController.page == 1) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: PageView(
         controller: _pageController,
-        physics: const ClampingScrollPhysics(), // Prevents overscrolling
+        physics: const ClampingScrollPhysics(),
         children: [
           _imageInputScreen(),
           SelectEmotionScreen(keywords: _keywords),
@@ -163,86 +188,57 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   /// First Page: Image Input
   Widget _imageInputScreen() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            'Step 1/2',
-            style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          Image.asset("assets/images/step_1.gif", height: 250, width: 200),
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 100,),
+            Text(
+              'Step 1/2',
+              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            Image.asset("assets/images/step_1.gif", height: 250, width: 200),
 
-          // Dotted Border for Upload
-          GestureDetector(
-            onTap: () => _pickImage(fromCamera: false),
-            child: DottedBorder(
-              color: Colors.grey,
-              strokeWidth: 2,
-              dashPattern: [6, 4],
-              borderType: BorderType.RRect,
-              radius: const Radius.circular(10),
-              child: Container(
-                width: 200,
-                height: 150,
-                alignment: Alignment.center,
-                child: _selectedImage != null
-                    ? Image.file(_selectedImage!, fit: BoxFit.cover)
-                    : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.upload, size: 40, color: Colors.black54),
-                    const SizedBox(height: 5),
-                    Text('Tap to Upload', style: GoogleFonts.poppins(fontSize: 16)),
-                  ],
+            GestureDetector(
+              onTap: _pickImage,
+              child: DottedBorder(
+                color: Colors.grey,
+                strokeWidth: 2,
+                dashPattern: [6, 4],
+                borderType: BorderType.RRect,
+                radius: const Radius.circular(10),
+                child: Container(
+                  width: 200,
+                  height: 150,
+                  alignment: Alignment.center,
+                  child: _selectedImage != null
+                      ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                      : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.upload, size: 40, color: Colors.black54),
+                      const SizedBox(height: 5),
+                      Text('Tap to Upload', style: GoogleFonts.poppins(fontSize: 16)),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
 
-          // Gemini AI Response Section (Loading + Generated Keywords)
-          if (_selectedImage != null) ...[
-            Text(
-              'Gemini Generated Keywords:',
-              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 5),
-            Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.blueGrey[50],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : Text(
-                _keywords,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(fontSize: 16),
-              ),
-            ),
             const SizedBox(height: 20),
-          ],
 
-          // Navigation Buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _previousPage,
-              ),
-              ElevatedButton(
-                onPressed: _selectedImage != null ? _nextPage : null,
-                child: Text('Next →', style: GoogleFonts.poppins()),
-              ),
+            // Gemini AI Response Section
+            if (_selectedImage != null) ...[
+              Text('Gemini Generated Keywords:', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 5),
+              Text(_keywords, textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 16)),
+              const SizedBox(height: 20),
             ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
