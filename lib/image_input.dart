@@ -54,6 +54,10 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
 
     // Combine all words into a single set
     allEmotionKeywords = joyKeywords.union(sadnessKeywords).union(angerKeywords);
+
+    print("Lexicon contains 'happy': ${allEmotionKeywords.contains('happy')}");
+    print("Lexicon contains 'happy ' (with space): ${allEmotionKeywords.contains('happy ')}");
+
   }
 
   /// Opens dialog to choose between Camera or Gallery

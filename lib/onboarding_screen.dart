@@ -35,15 +35,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    loadAllLexicons(); // Load emotion lexicons at startup
+    loadAllLexicons().then((_) {
+      print("Lexicons loaded: ${allEmotionKeywords.length} words"); // Debugging
+    });
   }
+
 
   /// Load emotion keywords from lexicon text files in assets
   Future<Set<String>> loadEmotionKeywords(String filePath) async {
     final String content = await rootBundle.loadString(filePath);
     return content
         .split('\n')
-        .map((line) => line.trim().split(' ')[0].toLowerCase()) // Ignore the "1"
+        .map((line) => line.split(' ')[0].trim().toLowerCase()) // Remove spaces and convert to lowercase
         .toSet();
   }
 
@@ -97,10 +100,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           {
             "parts": [
               {
-                "text": "Extract exactly 5-7 emotion-related keywords from the image. "
-                    "Only use words that match the provided lexicon lists. "
-                    "Do NOT include explanations, sentences, or additional text. "
-                    "Output format: ['keyword1', 'keyword2', 'keyword3', ...]."
+                "text": "Extract exactly 5-7 emotion-related keywords from the image."
+                    "Only use words from this predefined lexicon:"
+                    "\nJoy: ${joyKeywords.join(', ')}"
+                    "\nSadness: ${sadnessKeywords.join(', ')}"
+                    "\nAnger: ${angerKeywords.join(', ')}"
+                    "\nDo NOT generate words outside this list."
+                    "\nFormat the output as a comma-separated list: keyword1, keyword2, keyword3, ..."
+
               },
               {
                 "inlineData": {
@@ -127,6 +134,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
+        print("Raw API Response: $result"); // DEBUGGING
 
         if (result['candidates'] != null &&
             result['candidates'].isNotEmpty &&
@@ -143,7 +151,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           List<String> extractedWords = rawKeywords.split(',').map((word) => word.trim().toLowerCase()).toList();
 
           // Filter keywords against the lexicons
-          List<String> filteredKeywords = extractedWords.where((word) => allEmotionKeywords.contains(word)).toList();
+          List<String> filteredKeywords = extractedWords.where((word) {
+            String cleanedWord = word.trim().toLowerCase(); // Normalize API word
+            bool isInLexicon = allEmotionKeywords.contains(cleanedWord);
+            print("Checking word: '$cleanedWord' - In Lexicon: $isInLexicon"); // Debugging
+            return isInLexicon;
+          }).toList();
 
           // Limit to 5-7 keywords
           filteredKeywords = filteredKeywords.take(7).toList();
