@@ -42,23 +42,34 @@ class _ImageInputScreenState extends State<ImageInputScreen> {
     final String content = await rootBundle.loadString(filePath);
     return content
         .split('\n')
-        .map((line) => line.trim().split(' ')[0].toLowerCase()) // Ignore the "1"
+        .map((line) => line.split(RegExp(r'\s+'))[0].trim().toLowerCase()) // Handles extra spaces
+        .where((word) => word.isNotEmpty) // Remove empty strings
         .toSet();
   }
 
   /// Load all lexicon files into memory
   Future<void> loadAllLexicons() async {
-    joyKeywords = await loadEmotionKeywords("assets/joy-NRC-Emotion-Lexicon.txt");
-    sadnessKeywords = await loadEmotionKeywords("assets/sadness-NRC-Emotion-Lexicon.txt");
-    angerKeywords = await loadEmotionKeywords("assets/anger-NRC-Emotion-Lexicon.txt");
+    print("Loading lexicons...");
+
+    joyKeywords = await loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
+    print("Loaded joy: ${joyKeywords.length} words");
+
+    sadnessKeywords = await loadEmotionKeywords("assets/txt/sadness-NRC-Emotion-Lexicon.txt");
+    print("Loaded sadness: ${sadnessKeywords.length} words");
+
+    angerKeywords = await loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
+    print("Loaded anger: ${angerKeywords.length} words");
 
     // Combine all words into a single set
     allEmotionKeywords = joyKeywords.union(sadnessKeywords).union(angerKeywords);
+    print("Total unique words: ${allEmotionKeywords.length}");
 
+    // Check if 'happy' is recognized
     print("Lexicon contains 'happy': ${allEmotionKeywords.contains('happy')}");
     print("Lexicon contains 'happy ' (with space): ${allEmotionKeywords.contains('happy ')}");
-
+    print("First 20 words: ${allEmotionKeywords.toList().sublist(0, 20)}"); // Print first 20 words
   }
+
 
   /// Opens dialog to choose between Camera or Gallery
   Future<void> _showImagePickerOptions() async {

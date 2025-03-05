@@ -46,18 +46,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final String content = await rootBundle.loadString(filePath);
     return content
         .split('\n')
-        .map((line) => line.split(' ')[0].trim().toLowerCase()) // Remove spaces and convert to lowercase
+        .map((line) => line.split(RegExp(r'\s+'))[0].trim().toLowerCase()) // Handles extra spaces
+        .where((word) => word.isNotEmpty) // Remove empty strings
         .toSet();
   }
 
   /// Load all lexicon files into memory
   Future<void> loadAllLexicons() async {
+    print("Loading lexicons...");
+
     joyKeywords = await loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
+    print("Loaded joy: ${joyKeywords.length} words");
+
     sadnessKeywords = await loadEmotionKeywords("assets/txt/sadness-NRC-Emotion-Lexicon.txt");
+    print("Loaded sadness: ${sadnessKeywords.length} words");
+
     angerKeywords = await loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
+    print("Loaded anger: ${angerKeywords.length} words");
 
     // Combine all words into a single set
     allEmotionKeywords = joyKeywords.union(sadnessKeywords).union(angerKeywords);
+    print("Total unique words: ${allEmotionKeywords.length}");
   }
 
   /// Picks an image from gallery or camera
