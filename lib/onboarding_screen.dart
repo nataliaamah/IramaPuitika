@@ -17,9 +17,10 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   File? _selectedImage;
-  String _keywords = 'No response yet.'; // Default message
+  String _keywords = 'No response yet.';
   String? _selectedEmotion;
   bool _isLoading = false;
+  int _currentStep = 0; // Track current onboarding step
 
   final ImagePicker _picker = ImagePicker();
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM';
@@ -47,11 +48,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> loadAllLexicons() async {
-    joyKeywords = await loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
-    sadnessKeywords = await loadEmotionKeywords("assets/txt/sadness-NRC-Emotion-Lexicon.txt");
-    angerKeywords = await loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
+    joyKeywords =
+    await loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
+    sadnessKeywords =
+    await loadEmotionKeywords("assets/txt/sadness-NRC-Emotion-Lexicon.txt");
+    angerKeywords =
+    await loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
 
-    allEmotionKeywords = joyKeywords.union(sadnessKeywords).union(angerKeywords);
+    allEmotionKeywords =
+        joyKeywords.union(sadnessKeywords).union(angerKeywords);
   }
 
   Future<void> _pickImage({bool fromCamera = false}) async {
@@ -121,7 +126,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
-        final parts = result['candidates']?[0]['content']['parts'] as List<dynamic>? ?? [];
+        final parts = result['candidates']?[0]['content']['parts'] as List<
+            dynamic>? ?? [];
 
         List<String> extractedWords = parts
             .where((part) => part['text'] != null)
@@ -134,7 +140,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             .toList();
 
         setState(() {
-          _keywords = extractedWords.isNotEmpty ? extractedWords.join(", ") : "No valid keywords detected.";
+          _keywords = extractedWords.isNotEmpty
+              ? extractedWords.join(", ")
+              : "No valid keywords detected.";
           _isLoading = false;
         });
       } else {
@@ -154,12 +162,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: PageView(
-        controller: _pageController,
-        physics: const ClampingScrollPhysics(),
+      body: Column(
         children: [
-          _imageInputScreen(),
-          _emotionSelectionScreen(),
+          // Onboarding progress indicator
+          LinearProgressIndicator(
+            value: (_currentStep + 1) / 2,
+            backgroundColor: Colors.grey[300],
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+          ),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentStep = index;
+                });
+              },
+              physics: const ClampingScrollPhysics(),
+              children: [
+                _imageInputScreen(),
+                _emotionSelectionScreen(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -172,8 +197,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           Text(
             'Step 1/2',
-            style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+            style: GoogleFonts.poppins(
+                fontSize: 24, fontWeight: FontWeight.bold,),
           ),
+          Text(
+            'Select Scenery',
+            style: GoogleFonts.poppins(
+              fontSize: 24, fontWeight: FontWeight.bold,),
+          ),
+          Image.asset('assets/images/step_1.gif', height: 200, width: 300,),
           const SizedBox(height: 20),
           GestureDetector(
             onTap: () => _pickImage(fromCamera: false),
@@ -194,7 +226,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: [
                     const Icon(Icons.upload, size: 40, color: Colors.black54),
                     const SizedBox(height: 5),
-                    Text('Tap to Upload', style: GoogleFonts.poppins(fontSize: 16)),
+                    Text('Tap to Upload',
+                        style: GoogleFonts.poppins(fontSize: 16)),
                   ],
                 ),
               ),
@@ -203,11 +236,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 20),
           if (_isLoading) const CircularProgressIndicator(),
           if (!_isLoading && _selectedImage != null)
-            Text(
-              "Gemini Generated Keywords: $_keywords",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(fontSize: 16),
+            Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: Colors.blueGrey[50],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                "Gemini Generated Keywords:\n$_keywords",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(fontSize: 16),
+              ),
             ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Back Button
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+
+              // Generate Button (Proceed)
+              IconButton(
+                icon: const Icon(Icons.arrow_forward),
+                onPressed: _selectedImage != null
+                    ? () =>
+                    _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut)
+                    : null,
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -220,15 +285,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         children: [
           Text(
             'Step 2/2',
-            style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+            style: GoogleFonts.poppins(
+                fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 20),
-          Image.asset("assets/images/step_2.gif", height: 250, width: 200),
           Text(
             'Select Emotion',
-            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w500),
+            style: GoogleFonts.poppins(
+                fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
+          Image.asset('assets/images/step_2.gif',height: 200, width: 300,),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -240,19 +307,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ],
           ),
           const SizedBox(height: 30),
-          ElevatedButton(
-            onPressed: _selectedEmotion != null
-                ? () => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Generating for $_selectedEmotion and "$_keywords"...')),
-            )
-                : null,
-            child: const Text('Generate'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  _pageController.previousPage(
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                  );
+                },
+              ),
+              ElevatedButton(
+                onPressed: _selectedEmotion != null
+                    ? () => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Generating for $_selectedEmotion and "$_keywords"...'),
+                  ),
+                )
+                    : null,
+                child: const Text('Generate'),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  /// Emotion Selection Button Widget (Uses Asset Images)
   Widget _emotionButton(String emotion, String assetPath, Color color) {
     return GestureDetector(
       onTap: () {
@@ -266,7 +350,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _selectedEmotion == emotion ? color.withOpacity(0.3) : Colors.grey[200], // ✅ Light highlight instead of removing image
+              color: _selectedEmotion == emotion
+                  ? color.withOpacity(0.3)
+                  : Colors.grey[200],
+              // ✅ Light highlight instead of removing image
               border: Border.all(
                 color: _selectedEmotion == emotion ? color : Colors.grey,
                 width: 2,
@@ -284,7 +371,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: _selectedEmotion == emotion ? color : Colors.black, // ✅ Highlight text color if selected
+              color: _selectedEmotion == emotion ? color : Colors
+                  .black, // ✅ Highlight text color if selected
             ),
           ),
         ],
