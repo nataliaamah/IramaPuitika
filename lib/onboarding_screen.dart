@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:dotted_border/dotted_border.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'select_emotion.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -18,7 +17,8 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   File? _selectedImage;
-  String _keywords = 'No response yet.';
+  String _keywords = 'No response yet.'; // Default message
+  String? _selectedEmotion;
   bool _isLoading = false;
 
   final ImagePicker _picker = ImagePicker();
@@ -26,7 +26,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent';
 
-  // Emotion keywords loaded from the lexicon files
   Set<String> joyKeywords = {};
   Set<String> sadnessKeywords = {};
   Set<String> angerKeywords = {};
@@ -35,41 +34,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    loadAllLexicons().then((_) {
-      print("Lexicons loaded: ${allEmotionKeywords.length} words"); // Debugging
-    });
+    loadAllLexicons();
   }
 
-
-  /// Load emotion keywords from lexicon text files in assets
   Future<Set<String>> loadEmotionKeywords(String filePath) async {
     final String content = await rootBundle.loadString(filePath);
     return content
         .split('\n')
-        .map((line) => line.split(RegExp(r'\s+'))[0].trim().toLowerCase()) // Handles extra spaces
-        .where((word) => word.isNotEmpty) // Remove empty strings
+        .map((line) => line.split(RegExp(r'\s+'))[0].trim().toLowerCase())
+        .where((word) => word.isNotEmpty)
         .toSet();
   }
 
-  /// Load all lexicon files into memory
   Future<void> loadAllLexicons() async {
-    print("Loading lexicons...");
-
     joyKeywords = await loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
-    print("Loaded joy: ${joyKeywords.length} words");
-
     sadnessKeywords = await loadEmotionKeywords("assets/txt/sadness-NRC-Emotion-Lexicon.txt");
-    print("Loaded sadness: ${sadnessKeywords.length} words");
-
     angerKeywords = await loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
-    print("Loaded anger: ${angerKeywords.length} words");
 
-    // Combine all words into a single set
     allEmotionKeywords = joyKeywords.union(sadnessKeywords).union(angerKeywords);
-    print("Total unique words: ${allEmotionKeywords.length}");
   }
 
-  /// Picks an image from gallery or camera
   Future<void> _pickImage({bool fromCamera = false}) async {
     try {
       final pickedFile = await _picker.pickImage(
@@ -84,10 +68,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         });
 
         _uploadAndAnalyzeImage();
-      } else {
-        setState(() {
-          _keywords = "No image selected.";
-        });
       }
     } catch (e) {
       setState(() {
@@ -96,7 +76,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  /// Uploads and analyzes the image using Gemini API
   Future<void> _uploadAndAnalyzeImage() async {
     try {
       if (_selectedImage == null) return;
@@ -116,7 +95,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     "\nAnger: ${angerKeywords.join(', ')}"
                     "\nDo NOT generate words outside this list."
                     "\nFormat the output as a comma-separated list: keyword1, keyword2, keyword3, ..."
-
               },
               {
                 "inlineData": {
@@ -143,43 +121,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
-        print("Raw API Response: $result"); // DEBUGGING
+        final parts = result['candidates']?[0]['content']['parts'] as List<dynamic>? ?? [];
 
-        if (result['candidates'] != null &&
-            result['candidates'].isNotEmpty &&
-            result['candidates'][0]['content'] != null &&
-            result['candidates'][0]['content']['parts'] != null) {
-          final parts = result['candidates'][0]['content']['parts'] as List<dynamic>;
+        List<String> extractedWords = parts
+            .where((part) => part['text'] != null)
+            .map((part) => part['text'].toString().toLowerCase().trim())
+            .expand((text) => text.split(','))
+            .map((word) => word.trim())
+            .where((word) => allEmotionKeywords.contains(word))
+            .toList()
+            .take(7)
+            .toList();
 
-          // Extract and clean keywords
-          String rawKeywords = parts
-              .where((part) => part['text'] != null && part['text'] is String)
-              .map((part) => part['text'] as String)
-              .join(',');
-
-          List<String> extractedWords = rawKeywords.split(',').map((word) => word.trim().toLowerCase()).toList();
-
-          // Filter keywords against the lexicons
-          List<String> filteredKeywords = extractedWords.where((word) {
-            String cleanedWord = word.trim().toLowerCase(); // Normalize API word
-            bool isInLexicon = allEmotionKeywords.contains(cleanedWord);
-            print("Checking word: '$cleanedWord' - In Lexicon: $isInLexicon"); // Debugging
-            return isInLexicon;
-          }).toList();
-
-          // Limit to 5-7 keywords
-          filteredKeywords = filteredKeywords.take(7).toList();
-
-          setState(() {
-            _keywords = filteredKeywords.join(", ");
-            _isLoading = false;
-          });
-        } else {
-          setState(() {
-            _keywords = 'No valid response received.';
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _keywords = extractedWords.isNotEmpty ? extractedWords.join(", ") : "No valid keywords detected.";
+          _isLoading = false;
+        });
       } else {
         setState(() {
           _keywords = 'Error ${response.statusCode}: ${response.reasonPhrase}';
@@ -202,65 +159,135 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         physics: const ClampingScrollPhysics(),
         children: [
           _imageInputScreen(),
-          SelectEmotionScreen(keywords: _keywords),
+          _emotionSelectionScreen(),
         ],
       ),
     );
   }
 
-  /// First Page: Image Input
   Widget _imageInputScreen() {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 100,),
-            Text(
-              'Step 1/2',
-              style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            Image.asset("assets/images/step_1.gif", height: 250, width: 200),
-
-            GestureDetector(
-              onTap: _pickImage,
-              child: DottedBorder(
-                color: Colors.grey,
-                strokeWidth: 2,
-                dashPattern: [6, 4],
-                borderType: BorderType.RRect,
-                radius: const Radius.circular(10),
-                child: Container(
-                  width: 200,
-                  height: 150,
-                  alignment: Alignment.center,
-                  child: _selectedImage != null
-                      ? Image.file(_selectedImage!, fit: BoxFit.cover)
-                      : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.upload, size: 40, color: Colors.black54),
-                      const SizedBox(height: 5),
-                      Text('Tap to Upload', style: GoogleFonts.poppins(fontSize: 16)),
-                    ],
-                  ),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Step 1/2',
+            style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () => _pickImage(fromCamera: false),
+            child: DottedBorder(
+              color: Colors.grey,
+              strokeWidth: 2,
+              dashPattern: [6, 4],
+              borderType: BorderType.RRect,
+              radius: const Radius.circular(10),
+              child: Container(
+                width: 200,
+                height: 150,
+                alignment: Alignment.center,
+                child: _selectedImage != null
+                    ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                    : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.upload, size: 40, color: Colors.black54),
+                    const SizedBox(height: 5),
+                    Text('Tap to Upload', style: GoogleFonts.poppins(fontSize: 16)),
+                  ],
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 20),
+          if (_isLoading) const CircularProgressIndicator(),
+          if (!_isLoading && _selectedImage != null)
+            Text(
+              "Gemini Generated Keywords: $_keywords",
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(fontSize: 16),
+            ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 20),
-
-            // Gemini AI Response Section
-            if (_selectedImage != null) ...[
-              Text('Gemini Generated Keywords:', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 5),
-              Text(_keywords, textAlign: TextAlign.center, style: GoogleFonts.poppins(fontSize: 16)),
-              const SizedBox(height: 20),
+  Widget _emotionSelectionScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Step 2/2',
+            style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          Image.asset("assets/images/step_2.gif", height: 250, width: 200),
+          Text(
+            'Select Emotion',
+            style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(height: 15),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _emotionButton('Happy', 'assets/images/happy.png', Colors.amber),
+              const SizedBox(width: 15),
+              _emotionButton('Angry', 'assets/images/angry.png', Colors.red),
+              const SizedBox(width: 15),
+              _emotionButton('Sad', 'assets/images/sad.png', Colors.blue),
             ],
-          ],
-        ),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            onPressed: _selectedEmotion != null
+                ? () => ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Generating for $_selectedEmotion and "$_keywords"...')),
+            )
+                : null,
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emotionButton(String emotion, String assetPath, Color color) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedEmotion = emotion;
+        });
+      },
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _selectedEmotion == emotion ? color.withOpacity(0.3) : Colors.grey[200], // ✅ Light highlight instead of removing image
+              border: Border.all(
+                color: _selectedEmotion == emotion ? color : Colors.grey,
+                width: 2,
+              ),
+            ),
+            child: Image.asset(
+              assetPath,
+              width: 50,
+              height: 50,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            emotion,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: _selectedEmotion == emotion ? color : Colors.black, // ✅ Highlight text color if selected
+            ),
+          ),
+        ],
       ),
     );
   }
