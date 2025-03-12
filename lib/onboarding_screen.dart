@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:dotted_border/dotted_border.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:testing/result.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -26,6 +27,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM';
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent';
+  final String flaskApiUrl = "http://192.168.50.160:5000/recommend"; // Flask URL
 
   Set<String> joyKeywords = {};
   Set<String> sadnessKeywords = {};
@@ -93,12 +95,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           {
             "parts": [
               {
-                "text": "Extract exactly 5-7 emotion-related keywords from the image."
-                    "Only use words from this predefined lexicon:"
+                "text": "Analyze the given image and extract 5-7 keywords that best describe both its visual elements and emotional tone."
+                    "\nYou MUST strictly choose words only from the predefined lexicons below. Do NOT add new words."
+                    "\nIf no word from the list applies to the scene, select the closest matching words from the lexicon."
+                    "\nThe final output should be a mix of descriptive and emotional words from this predefined list."
+                    "\nOnly use words from the following lexicons:"
                     "\nJoy: ${joyKeywords.join(', ')}"
                     "\nSadness: ${sadnessKeywords.join(', ')}"
                     "\nAnger: ${angerKeywords.join(', ')}"
-                    "\nDo NOT generate words outside this list."
+                    "\nDO NOT generate words outside this list. If a word is not in the list, exclude it."
                     "\nFormat the output as a comma-separated list: keyword1, keyword2, keyword3, ..."
               },
               {
@@ -156,6 +161,47 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _keywords = 'Error: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _fetchPantunRecommendations() async {
+    try {
+      print("🚀 Sending to API: ${jsonEncode({
+        "emotion": _selectedEmotion,
+        "image_keywords": _keywords.split(', ').map((word) => word.trim()).toList()
+      })}");
+
+      var response = await http.post(
+        Uri.parse(flaskApiUrl), // Your Flask API Endpoint
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "emotion": _selectedEmotion,
+          "image_keywords": _keywords.split(', ').map((word) => word.trim()).toList()
+        }),
+      );
+
+      print("API Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        var data = jsonDecode(response.body);
+        List<Map<String, dynamic>> pantunResults = List<Map<String, dynamic>>.from(data['pantuns']);
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ResultScreen(result: pantunResults), // ✅ Now explicitly defined
+          ),
+        );
+
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${response.statusCode}")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to fetch pantun: $e")),
+      );
     }
   }
 
@@ -320,14 +366,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
               ),
               ElevatedButton(
-                onPressed: _selectedEmotion != null
-                    ? () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Generating for $_selectedEmotion and "$_keywords"...'),
-                  ),
-                )
-                    : null,
-                child: const Text('Generate'),
+                onPressed: _selectedEmotion != null ? _fetchPantunRecommendations : null,
+                child: const Text('Generate Pantun'),
               ),
             ],
           ),

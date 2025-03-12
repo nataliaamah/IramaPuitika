@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'result.dart'; // Import the result screen
 
 class SelectEmotionScreen extends StatefulWidget {
   final String keywords; // Accept keywords as a parameter
@@ -12,6 +15,7 @@ class SelectEmotionScreen extends StatefulWidget {
 
 class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
   String? _selectedEmotion; // Store the selected emotion
+  bool _isLoading = false; // Track loading state
 
   @override
   Widget build(BuildContext context) {
@@ -66,15 +70,14 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
 
                 // Generate Button (Proceed)
                 ElevatedButton(
-                  onPressed: _selectedEmotion != null
-                      ? () {
-                    String receivedKeywords = widget.keywords;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Generating for $_selectedEmotion and "$receivedKeywords"...')),
-                    );
-                  }
-                      : null, // Disable button if no emotion is selected
-                  child: const Text('Generate'),
+                  onPressed: _selectedEmotion != null && !_isLoading
+                      ? () => _sendDataToAPI()
+                      : null, // Disable button if no emotion is selected or loading
+                  child: _isLoading
+                      ? const SizedBox(
+                    height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                      : const Text('Generate'),
                 ),
               ],
             ),
@@ -121,6 +124,55 @@ class _SelectEmotionScreenState extends State<SelectEmotionScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Send selected emotion & keywords to Flask API
+  Future<void> _sendDataToAPI() async {
+    setState(() {
+      _isLoading = true; // Show loading indicator
+    });
+
+    const String apiUrl = "http://127.0.0.1:5000/recommend"; // Flask API URL
+    final Map<String, dynamic> requestData = {
+      "emotion": _selectedEmotion,
+      "keywords": widget.keywords.split(',') // Convert string to list
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(requestData),
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> pantunResults = jsonDecode(response.body);
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ResultScreen(result: pantunResults),
+            ),
+          );
+        }
+      } else {
+        _showError("Failed to fetch data. Please try again.");
+      }
+    } catch (error) {
+      _showError("Error: $error");
+    }
+
+    setState(() {
+      _isLoading = false; // Hide loading indicator
+    });
+  }
+
+  /// Show error message as a Snackbar
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 }
