@@ -15,69 +15,60 @@ class PantunDetailScreen extends StatelessWidget {
           style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Colors.black87,
           ),
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.deepPurple,
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.deepPurple.shade100, Colors.white],
-          ),
-        ),
+        color: Colors.white,
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Pantun Text in a Decorative Box
+              // Pantun Text in a Minimalist Card
               Center(
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(15),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.deepPurple.withOpacity(0.1),
+                        color: Colors.black.withOpacity(0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                       ),
                     ],
-                    border: Border.all(
-                      color: Colors.deepPurple.shade300,
-                      width: 2,
-                    ),
                   ),
                   child: Column(
                     children: [
-                      // Decorative Icon at the Top
-                      Icon(
-                        Icons.auto_awesome,
-                        size: 40,
-                        color: Colors.deepPurple.shade400,
+                      // Custom Illustration (Placeholder)
+                      Image.asset(
+                        'assets/images/pantun.png', // Add your custom illustration
+                        height: 150,
+                        width: 200,
                       ),
-                      const SizedBox(height: 10),
-                      // Pantun Text with Creative Typography
+
+                      // Pantun Text with Elegant Typography
                       Text(
                         pantunData['pantun'] ?? 'No pantun available',
-                        style: GoogleFonts.dancingScript(
-                          fontSize: 26,
+                        style: GoogleFonts.caveat(
+                          fontSize: 24,
                           fontWeight: FontWeight.w600,
-                          color: Colors.deepPurple.shade900,
+                          color: Colors.black87,
+                          fontStyle: FontStyle.italic,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 16),
                       // Decorative Divider
                       Divider(
-                        color: Colors.deepPurple.shade300,
+                        color: Colors.grey.shade300,
                         thickness: 1,
                         height: 20,
                       ),
@@ -87,14 +78,14 @@ class PantunDetailScreen extends StatelessWidget {
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontStyle: FontStyle.italic,
-                          color: Colors.deepPurple.shade600,
+                          color: Colors.grey.shade600,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 32),
 
               // Keywords Section
               _buildDetailSection(
@@ -112,9 +103,9 @@ class PantunDetailScreen extends StatelessWidget {
                 content: _formatKeywords(pantunData['emotion']),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 32),
 
-              // Share Button
+              // Share Button (Elevated Button)
               Center(
                 child: ElevatedButton.icon(
                   onPressed: () {
@@ -130,7 +121,7 @@ class PantunDetailScreen extends StatelessWidget {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
+                    backgroundColor: Colors.black87,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
@@ -153,15 +144,15 @@ class PantunDetailScreen extends StatelessWidget {
     required String content,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.deepPurple.withOpacity(0.1),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -171,7 +162,7 @@ class PantunDetailScreen extends StatelessWidget {
           Icon(
             icon,
             size: 24,
-            color: Colors.deepPurple.shade400,
+            color: Colors.black87,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -183,7 +174,7 @@ class PantunDetailScreen extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple.shade900,
+                    color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -191,7 +182,7 @@ class PantunDetailScreen extends StatelessWidget {
                   content,
                   style: GoogleFonts.poppins(
                     fontSize: 16,
-                    color: Colors.deepPurple.shade700,
+                    color: Colors.grey.shade700,
                   ),
                 ),
               ],
