@@ -21,13 +21,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String _keywords = 'No response yet.';
   String? _selectedEmotion;
   bool _isLoading = false;
-  int _currentStep = 0; // Track current onboarding step
+  int _currentStep = 0;
 
   final ImagePicker _picker = ImagePicker();
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM';
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent';
-  final String flaskApiUrl = "http://192.168.50.160:5000/recommend"; // Flask URL
+  final String flaskApiUrl = "http://192.168.50.160:5000/recommend";
 
   Set<String> joyKeywords = {};
   Set<String> sadnessKeywords = {};
@@ -208,116 +208,165 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          // Onboarding progress indicator
-          LinearProgressIndicator(
-            value: (_currentStep + 1) / 2,
-            backgroundColor: Colors.grey[300],
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-          ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentStep = index;
-                });
-              },
-              physics: const ClampingScrollPhysics(),
-              children: [
-                _imageInputScreen(),
-                _emotionSelectionScreen(),
-              ],
+      body: Container(
+        color: Colors.white, // Plain white background
+        child: Column(
+          children: [
+            // Progress Indicator
+            LinearProgressIndicator(
+              value: (_currentStep + 1) / 2,
+              backgroundColor: Colors.grey[300],
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.black87),
             ),
-          ),
-        ],
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentStep = index;
+                  });
+                },
+                physics: const ClampingScrollPhysics(),
+                children: [
+                  _imageInputScreen(),
+                  _emotionSelectionScreen(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _imageInputScreen() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Step 1/2',
+            'Step 1: Upload Your Scenery',
             style: GoogleFonts.poppins(
-                fontSize: 24, fontWeight: FontWeight.bold,),
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
+          const SizedBox(height: 10),
           Text(
-            'Select Scenery',
+            'Choose an image that inspires you',
             style: GoogleFonts.poppins(
-              fontSize: 24, fontWeight: FontWeight.bold,),
+              fontSize: 16,
+              color: Colors.grey.shade700,
+            ),
           ),
-          Image.asset('assets/images/step_1.gif', height: 200, width: 300,),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
           GestureDetector(
             onTap: () => _pickImage(fromCamera: false),
-            child: DottedBorder(
-              color: Colors.grey,
-              strokeWidth: 2,
-              dashPattern: [6, 4],
-              borderType: BorderType.RRect,
-              radius: const Radius.circular(10),
+            child: Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
               child: Container(
-                width: 200,
-                height: 150,
+                width: 250,
+                height: 200,
                 alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(15),
+                ),
                 child: _selectedImage != null
-                    ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                    ? ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Image.file(_selectedImage!, fit: BoxFit.cover),
+                )
                     : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.upload, size: 40, color: Colors.black54),
-                    const SizedBox(height: 5),
-                    Text('Tap to Upload',
-                        style: GoogleFonts.poppins(fontSize: 16)),
+                    Icon(
+                      Icons.cloud_upload,
+                      size: 50,
+                      color: Colors.grey.shade700,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Tap to Upload',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          if (_isLoading) const CircularProgressIndicator(),
+          const SizedBox(height: 30),
+          if (_isLoading)
+            CircularProgressIndicator(
+              color: Colors.black87,
+            ),
           if (!_isLoading && _selectedImage != null)
-            Container(
-              padding: const EdgeInsets.all(10),
+            Card(
+              elevation: 4,
               margin: const EdgeInsets.symmetric(horizontal: 20),
-              decoration: BoxDecoration(
-                color: Colors.blueGrey[50],
-                borderRadius: BorderRadius.circular(10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
               ),
-              child: Text(
-                "Gemini Generated Keywords:\n$_keywords",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(fontSize: 16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Text(
+                  "Keywords: $_keywords",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
               ),
             ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Back Button
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+          const SizedBox(height: 30),
+          ElevatedButton(
+            onPressed: _selectedImage != null
+                ? () => _pageController.nextPage(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            )
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black87,
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
               ),
-
-              // Generate Button (Proceed)
-              IconButton(
-                icon: const Icon(Icons.arrow_forward),
-                onPressed: _selectedImage != null
-                    ? () =>
-                    _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut)
-                    : null,
+            ),
+            child: Text(
+              'Next',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-            ],
+            ),
+          ),
+          const SizedBox(height: 5,),
+          TextButton(
+            onPressed: () {
+              // Navigate back to HomePage
+              Navigator.pop(context);
+            },
+            child: Text(
+              'Back to Home',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
           ),
         ],
       ),
@@ -325,97 +374,115 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _emotionSelectionScreen() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            'Step 2/2',
+            'Step 2: Choose Your Emotion',
             style: GoogleFonts.poppins(
-                fontSize: 24, fontWeight: FontWeight.bold),
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
+          const SizedBox(height: 10),
           Text(
-            'Select Emotion',
+            'How does the scenery make you feel?',
             style: GoogleFonts.poppins(
-                fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          Image.asset('assets/images/step_2.gif',height: 200, width: 300,),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _emotionButton('Happy', 'assets/images/happy.png', Colors.amber),
-              const SizedBox(width: 15),
-              _emotionButton('Angry', 'assets/images/angry.png', Colors.red),
-              const SizedBox(width: 15),
-              _emotionButton('Sad', 'assets/images/sad.png', Colors.blue),
-            ],
+              fontSize: 16,
+              color: Colors.grey.shade700,
+            ),
           ),
           const SizedBox(height: 30),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  _pageController.previousPage(
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeInOut,
-                  );
-                },
-              ),
-              ElevatedButton(
-                onPressed: _selectedEmotion != null ? _fetchPantunRecommendations : null,
-                child: const Text('Generate Pantun'),
-              ),
+              _emotionButton('Happy', 'assets/images/happy.png'),
+              _emotionButton('Angry', 'assets/images/angry.png'),
+              _emotionButton('Sad', 'assets/images/sad.png'),
             ],
+          ),
+          const SizedBox(height: 40),
+          ElevatedButton(
+            onPressed: _selectedEmotion != null ? _fetchPantunRecommendations : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black87,
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+            ),
+            child: Text(
+              'Generate Pantun',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          TextButton(
+            onPressed: () => _pageController.previousPage(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            ),
+            child: Text(
+              'Back',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Emotion Selection Button Widget (Uses Asset Images)
-  Widget _emotionButton(String emotion, String assetPath, Color color) {
+  Widget _emotionButton(String emotion, String assetPath) {
     return GestureDetector(
       onTap: () {
         setState(() {
           _selectedEmotion = emotion;
         });
       },
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _selectedEmotion == emotion
-                  ? color.withOpacity(0.3)
-                  : Colors.grey[200],
-              // ✅ Light highlight instead of removing image
-              border: Border.all(
-                color: _selectedEmotion == emotion ? color : Colors.grey,
-                width: 2,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _selectedEmotion == emotion ? Colors.grey.shade200 : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+              color: _selectedEmotion == emotion ? Colors.black87 : Colors.grey.shade300,
+              width: 2,
+            ),
+          ),
+          child: Column(
+            children: [
+              Image.asset(
+                assetPath,
+                width: 60,
+                height: 60,
               ),
-            ),
-            child: Image.asset(
-              assetPath,
-              width: 50,
-              height: 50,
-            ),
+              const SizedBox(height: 10),
+              Text(
+                emotion,
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 5),
-          Text(
-            emotion,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: _selectedEmotion == emotion ? color : Colors
-                  .black, // ✅ Highlight text color if selected
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

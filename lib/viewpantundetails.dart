@@ -20,7 +20,7 @@ class PantunDetailScreen extends StatelessWidget {
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: Container(
@@ -57,8 +57,8 @@ class PantunDetailScreen extends StatelessWidget {
                       // Pantun Text with Elegant Typography
                       Text(
                         pantunData['pantun'] ?? 'No pantun available',
-                        style: GoogleFonts.caveat(
-                          fontSize: 24,
+                        style: GoogleFonts.outfit(
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: Colors.black87,
                           fontStyle: FontStyle.italic,

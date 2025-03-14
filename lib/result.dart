@@ -12,24 +12,20 @@ class ResultScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Pantun Recommendations",
+          "Results",
           style: GoogleFonts.poppins(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: Colors.black87,
           ),
         ),
         centerTitle: true,
-        elevation: 0, // Remove shadow
+        elevation: 0,
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.deepPurple.shade50, Colors.white],
-          ),
-        ),
+        color: Colors.white,
         child: result.isEmpty
             ? _noResultsFound()
             : ListView.builder(
@@ -63,33 +59,39 @@ class ResultScreen extends StatelessWidget {
         ),
         child: Container(
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.deepPurple.shade50, Colors.white],
-            ),
+            color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Pantun Text
                 Text(
                   pantunData['pantun'] ?? 'No pantun available',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.deepPurple.shade900,
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
                 const SizedBox(height: 12),
+                // Keywords Section
                 Row(
                   children: [
                     Icon(
                       Icons.tag,
                       size: 16,
-                      color: Colors.deepPurple.shade400,
+                      color: Colors.black87,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -97,26 +99,27 @@ class ResultScreen extends StatelessWidget {
                         "Keywords: ${_formatKeywords(pantunData['keywords'])}",
                         style: GoogleFonts.poppins(
                           fontSize: 14,
-                          color: Colors.deepPurple.shade700,
+                          color: Colors.grey.shade700,
                         ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
+                // Emotion Section
                 Row(
                   children: [
                     Icon(
                       Icons.emoji_emotions,
                       size: 16,
-                      color: Colors.deepPurple.shade400,
+                      color: Colors.black87,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       "Emotion: ${_formatKeywords(pantunData['emotion'])}",
                       style: GoogleFonts.poppins(
                         fontSize: 14,
-                        color: Colors.deepPurple.shade700,
+                        color: Colors.grey.shade700,
                       ),
                     ),
                   ],
@@ -132,11 +135,11 @@ class ResultScreen extends StatelessWidget {
   /// ✅ Function to safely format keywords
   String _formatKeywords(dynamic keywords) {
     if (keywords is List) {
-      return keywords.join(', '); // ✅ Properly joins a list
+      return keywords.join(', ');
     } else if (keywords is String) {
-      return keywords; // ✅ Already a string, return as is
+      return keywords;
     }
-    return 'Unknown'; // ✅ Fallback
+    return 'Unknown';
   }
 
   /// 📌 No Results Found
@@ -148,7 +151,7 @@ class ResultScreen extends StatelessWidget {
           Icon(
             Icons.search_off,
             size: 64,
-            color: Colors.deepPurple.shade300,
+            color: Colors.grey.shade400,
           ),
           const SizedBox(height: 16),
           Text(
@@ -156,7 +159,7 @@ class ResultScreen extends StatelessWidget {
             style: GoogleFonts.poppins(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.deepPurple.shade700,
+              color: Colors.grey.shade700,
             ),
           ),
           const SizedBox(height: 8),
@@ -164,7 +167,7 @@ class ResultScreen extends StatelessWidget {
             "Try adjusting your keywords or emotion.",
             style: GoogleFonts.poppins(
               fontSize: 14,
-              color: Colors.deepPurple.shade500,
+              color: Colors.grey.shade600,
             ),
           ),
         ],
