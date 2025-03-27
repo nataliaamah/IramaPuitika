@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class PantunDetailScreen extends StatelessWidget {
   final Map<String, dynamic> pantunData;
@@ -108,8 +111,32 @@ class PantunDetailScreen extends StatelessWidget {
               // Share Button (Elevated Button)
               Center(
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    // Add share functionality here
+                  onPressed: () async {
+                    // Get the pantun text
+                    final pantunText = pantunData['pantun'] ?? 'No pantun available';
+
+                    // Share the pantun text
+                    Share.share(pantunText);
+
+                    // Save user preference (theme)
+                    final theme = pantunData['theme'];  // Use 'theme' instead of 'emotion'
+                    if (theme != null) {
+                      try {
+                        final response = await http.post(
+                          Uri.parse('http://192.168.50.160:5000/save_preference'),
+                          headers: {'Content-Type': 'application/json'},
+                          body: jsonEncode({'theme': theme}),
+                        );
+
+                        if (response.statusCode == 200) {
+                          print('Preference saved successfully');
+                        } else {
+                          print('Failed to save preference: ${response.statusCode}');
+                        }
+                      } catch (e) {
+                        print('Error saving preference: $e');
+                      }
+                    }
                   },
                   icon: const Icon(Icons.share, color: Colors.white),
                   label: Text(
