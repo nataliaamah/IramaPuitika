@@ -27,7 +27,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM';
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent';
-  final String flaskApiUrl = "http://192.168.50.160:5000/recommend";
+  final String flaskApiUrl = "http://172.20.10.6:5000/recommend";
 
   Set<String> joyKeywords = {};
   Set<String> sadnessKeywords = {};

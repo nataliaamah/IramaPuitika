@@ -123,7 +123,7 @@ class PantunDetailScreen extends StatelessWidget {
                     if (theme != null) {
                       try {
                         final response = await http.post(
-                          Uri.parse('http://192.168.50.160:5000/save_preference'),
+                          Uri.parse('http://172.20.10.6:5000/save_preference'),
                           headers: {'Content-Type': 'application/json'},
                           body: jsonEncode({'theme': theme}),
                         );
