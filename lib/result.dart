@@ -29,55 +29,53 @@ class _ResultScreenState extends State<ResultScreen> {
       backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: CardSwiper(
-          cardsCount: widget.result.length,
-          numberOfCardsDisplayed: 5,
-          isLoop: true,
-          scale: 1.0,
-          backCardOffset: Offset.zero,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
-          maxAngle: 5,
-          onSwipe: (prev, newIndex, direction) {
-            setState(() {
-              currentIndex = newIndex! % widget.result.length;
-            });
-            return true;
-          },
-          onEnd: () {
-            print("Reached end of cards");
-          },
-          cardBuilder: (context, index, hThreshold, vThreshold) {
-            final pantunData = widget.result[index % widget.result.length];
-            final isFront = index == currentIndex;
+          child: CardSwiper(
+            cardsCount: widget.result.length,
+            numberOfCardsDisplayed: 5,
+            isLoop: true,
+            scale: 1.0,
+            backCardOffset: Offset.zero,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
+            maxAngle: 5,
 
-            if (isFront) {
-              // Full visible front card
-              return _pantunCard(context, pantunData);
-            }
+            // No layoutOption here
+            onSwipe: (prev, newIndex, direction) {
+              setState(() {
+                currentIndex = newIndex! % widget.result.length;
+              });
+              return true;
+            },
+            onEnd: () => print("Reached end of cards"),
 
-            // Back cards: show real content, but dimmed and slightly offset
-            final offsetX = ((index % 3) - 1) * 8.0;
-            final offsetY = ((index % 4) - 1.5) * 6.0;
-            final angle = ((index % 5) - 2) * 0.015;
+            cardBuilder: (context, index, _, __) {
+              final pantunData = widget.result[index % widget.result.length];
+              final isFront = index == currentIndex;
 
-            return Transform.translate(
-              offset: Offset(offsetX, offsetY),
-              child: Transform.rotate(
-                angle: angle,
-                child: Opacity(
-                  opacity: 1,
-                  child: ColorFiltered(
-                    colorFilter: ColorFilter.mode(
-                      Colors.white.withOpacity(0.3),
-                      BlendMode.srcATop,
+              if (isFront) {
+                return _pantunCard(context, pantunData);
+              }
+
+              // Animate back cards manually
+              final offsetX = ((index % 3) - 1) * 10.0;
+              final offsetY = ((index % 5) - 2) * 6.0;
+              final angle = ((index % 5) - 2) * 0.01;
+              final scale = 0.92;
+
+              return Transform.translate(
+                offset: Offset(offsetX, offsetY),
+                child: Transform.rotate(
+                  angle: angle,
+                  child: Transform.scale(
+                    scale: scale,
+                    child: Opacity(
+                      opacity: 1,
+                      child: _pantunCard(context, pantunData, isDimmed: true),
                     ),
-                    child: _pantunCard(context, pantunData, isDimmed: true),
                   ),
                 ),
-              ),
-            );
-          },
-        ),
+              );
+            },
+          )
       ),
     );
   }
