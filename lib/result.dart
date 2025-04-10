@@ -29,53 +29,53 @@ class _ResultScreenState extends State<ResultScreen> {
       backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-          child: CardSwiper(
-            cardsCount: widget.result.length,
-            numberOfCardsDisplayed: 5,
-            isLoop: true,
-            scale: 1.0,
-            backCardOffset: Offset.zero,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
-            maxAngle: 5,
+        child: CardSwiper(
+          cardsCount: widget.result.length,
+          numberOfCardsDisplayed: 5,
+          isLoop: true,
+          scale: 1.0,
+          backCardOffset: Offset.zero,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 30),
+          maxAngle: 5,
+          onSwipe: (prev, newIndex, direction) {
+            setState(() {
+              currentIndex = newIndex! % widget.result.length;
+            });
+            return true;
+          },
+          onEnd: () => print("Reached end of cards"),
+          cardBuilder: (context, index, hThreshold, __) {
+            final pantunData = widget.result[index % widget.result.length];
+            final isFront = index == currentIndex;
 
-            // No layoutOption here
-            onSwipe: (prev, newIndex, direction) {
-              setState(() {
-                currentIndex = newIndex! % widget.result.length;
-              });
-              return true;
-            },
-            onEnd: () => print("Reached end of cards"),
+            if (isFront) {
+              final swipeAngle = hThreshold.clamp(-1.0, 1.0) * 0.05;
+              return Transform.rotate(
+                angle: swipeAngle,
+                child: _pantunCard(context, pantunData),
+              );
+            }
 
-            cardBuilder: (context, index, _, __) {
-              final pantunData = widget.result[index % widget.result.length];
-              final isFront = index == currentIndex;
+            final offsetX = ((index % 3) - 1) * 20.0;
+            final offsetY = ((index % 5) - 2) * 12.0;
+            final angle = ((index % 5) - 2) * 0.02;
+            final scale = 0.92;
 
-              if (isFront) {
-                return _pantunCard(context, pantunData);
-              }
-
-              // Animate back cards manually
-              final offsetX = ((index % 3) - 1) * 10.0;
-              final offsetY = ((index % 5) - 2) * 6.0;
-              final angle = ((index % 5) - 2) * 0.01;
-              final scale = 0.92;
-
-              return Transform.translate(
-                offset: Offset(offsetX, offsetY),
-                child: Transform.rotate(
-                  angle: angle,
-                  child: Transform.scale(
-                    scale: scale,
-                    child: Opacity(
-                      opacity: 1,
-                      child: _pantunCard(context, pantunData, isDimmed: true),
-                    ),
+            return Transform.translate(
+              offset: Offset(offsetX, offsetY),
+              child: Transform.rotate(
+                angle: angle,
+                child: Transform.scale(
+                  scale: scale,
+                  child: Opacity(
+                    opacity: 1,
+                    child: _pantunCard(context, pantunData, isDimmed: true),
                   ),
                 ),
-              );
-            },
-          )
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -100,77 +100,89 @@ class _ResultScreenState extends State<ResultScreen> {
   Widget _pantunCard(BuildContext context, Map<String, dynamic> pantunData, {bool isDimmed = false}) {
     return Padding(
       padding: const EdgeInsets.all(10.0),
-      child: IgnorePointer( // Prevent tap on back cards
+      child: IgnorePointer(
         ignoring: isDimmed,
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.85,
-          height: MediaQuery.of(context).size.height * 0.5,
-          child: Card(
-            elevation: 12,
-            shadowColor: Colors.black26,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: isDimmed ? Colors.grey.shade100 : Colors.white,
+        child: GestureDetector(
+          onTap: () {
+            if (!isDimmed) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PantunDetailScreen(pantunData: pantunData),
+                ),
+              );
+            }
+          },
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.85,
+            height: MediaQuery.of(context).size.height * 0.5,
+            child: Card(
+              elevation: 12,
+              shadowColor: Colors.black26,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 10,
-                    color: Colors.black.withOpacity(0.05),
-                    offset: const Offset(0, 5),
-                  )
-                ],
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    pantunData['pantun'] ?? 'No pantun available',
-                    style: GoogleFonts.outfit(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                      fontStyle: FontStyle.italic,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDimmed ? Colors.blueGrey : Colors.blueGrey.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 10,
+                      color: Colors.black.withOpacity(0.05),
+                      offset: const Offset(0, 5),
+                    )
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      pantunData['pantun'] ?? 'No pantun available',
+                      style: GoogleFonts.outfit(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Icon(Icons.tag, size: 16, color: Colors.black87),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        fit: FlexFit.loose,
-                        child: Text(
-                          "Keywords: ${_formatKeywords(pantunData['keywords'])}",
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Icon(Icons.tag, size: 16, color: Colors.black87),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: Text(
+                            "Keywords: ${_formatKeywords(pantunData['keywords'])}",
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey.shade700,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        const Icon(Icons.emoji_emotions, size: 16, color: Colors.black87),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Emotion: ${_formatKeywords(pantunData['emotion'])}",
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             color: Colors.grey.shade700,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.emoji_emotions, size: 16, color: Colors.black87),
-                      const SizedBox(width: 8),
-                      Text(
-                        "Emotion: ${_formatKeywords(pantunData['emotion'])}",
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
