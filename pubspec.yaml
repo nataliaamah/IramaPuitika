@@ -41,3 +41,5 @@ flutter:
     - assets/txt/joy-NRC-Emotion-Lexicon.txt
     - assets/txt/sadness-NRC-Emotion-Lexicon.txt
     - assets/txt/anger-NRC-Emotion-Lexicon.txt
+    - assets/images/batik_element_top_right.png
+    - assets/images/batik_element_bottom_left.png
