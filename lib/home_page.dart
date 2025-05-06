@@ -3,6 +3,7 @@ import 'package:flutter/services.dart'; // For HapticFeedback
 import 'onboarding_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart'; // Re-added for animations
+import 'dart:math' as math; // For pi
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,9 +12,31 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin { // Add SingleTickerProviderStateMixin
   bool _isButtonPressed = false; // Restored for button animation
   Key _pageKey = UniqueKey(); // Restored for page rebuild logic
+
+  late AnimationController _swayController; // Controller for the swaying animation
+  late Animation<double> _swayAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _swayController = AnimationController(
+      duration: const Duration(seconds: 4), // Duration of one full sway cycle
+      vsync: this,
+    )..repeat(reverse: true); // Repeat the animation back and forth
+
+    _swayAnimation = Tween<double>(begin: -0.01, end: 0.01).animate( // Sway angle in radians (approx -1.7 to 1.7 degrees)
+      CurvedAnimation(parent: _swayController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _swayController.dispose(); // Dispose the controller
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,12 +68,15 @@ class _HomePageState extends State<HomePage> {
                 child: FadeInRight(
                   delay: const Duration(milliseconds: 1100),
                   duration: const Duration(milliseconds: 800),
-                  child: Image.asset(
-                    'assets/images/batik_element_top_right.png', // Corrected: Flower for top right
-                    width: screenWidth * 0.9,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Container(width: screenWidth * 0.45, height: screenWidth * 0.4, color: Colors.transparent, child: const Icon(Icons.broken_image, color: goldText, size: 50)),
+                  child: RotationTransition( // Add RotationTransition
+                    turns: _swayAnimation,
+                    child: Image.asset(
+                      'assets/images/batik_element_top_right.png', // Corrected: Flower for top right
+                      width: screenWidth * 0.9,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Container(width: screenWidth * 0.45, height: screenWidth * 0.4, color: Colors.transparent, child: const Icon(Icons.broken_image, color: goldText, size: 50)),
+                    ),
                   ),
                 ),
               ),
@@ -62,12 +88,15 @@ class _HomePageState extends State<HomePage> {
                 child: FadeInLeft(
                   delay: const Duration(milliseconds: 1100),
                   duration: const Duration(milliseconds: 800),
-                  child: Image.asset(
-                    'assets/images/batik_element_bottom_left.png', // Corrected: BranchCorrected: Bttom left
-                    width: screenWidth * 1,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Container(width: screenWidth * 0.55, height: screenWidth * 0.5, color: Colors.transparent, child: const Icon(Icons.broken_image, color: goldText, size: 50)),
+                  child: RotationTransition( // Add RotationTransition
+                    turns: _swayAnimation, // Can use the same animation or a different one
+                    child: Image.asset(
+                      'assets/images/batik_element_bottom_left.png', // Corrected: BranchCorrected: Bttom left
+                      width: screenWidth * 1,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Container(width: screenWidth * 0.55, height: screenWidth * 0.5, color: Colors.transparent, child: const Icon(Icons.broken_image, color: goldText, size: 50)),
+                    ),
                   ),
                 ),
               ),
