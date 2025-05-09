@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async'; // Import for Timer
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:image_picker/image_picker.dart';
@@ -17,26 +18,33 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   File? _selectedImage;
-  String _keywords = 'Upload an image to see scene keywords.'; // Changed initial message
+  String _keywords = 'Upload an image to see scene keywords.';
   String? _selectedEmotion;
   bool _isLoading = false;
   int _currentStep = 0;
-  bool _isScenery = false; // Add this flag to track if the image is a scenery
+  bool _isScenery = false;
+
+  String? _loadingMessage1; // For the first timed message
+  String? _loadingMessage2; // For the second timed message
+  String? _loadingMessage3; // For the third timed message
+  Timer? _loadingTimer1;
+  Timer? _loadingTimer2;
+  Timer? _loadingTimer3;
 
   final ImagePicker _picker = ImagePicker();
-  // IMPORTANT: Secure your API key in a production environment.
-  final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM';
+  final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM'; // IMPORTANT: Secure your API key
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-03-25:generateContent';
-  // IMPORTANT: This is a local IP. For wider use, deploy your Flask API.
-  final String flaskApiUrl = "http://192.168.132.34:5000/recommend";
+  final String flaskApiUrl = "http://172.20.10.6:5000/recommend"; // IMPORTANT: Local IP
+
+  // Specific error message string for scenery validation
+  final String _invalidSceneryErrorMessage = "Error: Image is not a valid scenery. Please upload an image of grasslands, aquatic biomes, or forest biomes.";
 
   Set<String> joyKeywords = {};
   Set<String> sadnessKeywords = {};
   Set<String> angerKeywords = {};
   Set<String> allEmotionKeywords = {};
 
-  // --- UI Theme Colors (Adjusted) ---
   static const LinearGradient maroonGradientBackground = LinearGradient(
     colors: [Color(0xFF8A1D37), Color(0xFFAB5D5D)],
     begin: Alignment.topCenter,
@@ -44,15 +52,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   );
   static const Color goldText = Color(0xFFE6C68A);
   static const Color darkTealButton = Color(0xFF004D40);
-  // Made lightGoldAccent slightly brighter for better contrast
   static const Color lightGoldAccent = Color(0xFFF5EAD0);
-  // Adjusted card background for better content visibility
-  static const Color cardBackgroundColor = Color(0x33000000); // Darker semi-transparent
+  static const Color cardBackgroundColor = Color(0x33000000);
 
   @override
   void initState() {
     super.initState();
     loadAllLexicons();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _loadingTimer1?.cancel();
+    _loadingTimer2?.cancel();
+    _loadingTimer3?.cancel(); // Cancel the third timer
+    super.dispose();
   }
 
   Future<Set<String>> loadEmotionKeywords(String filePath) async {
@@ -65,38 +80,101 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> loadAllLexicons() async {
-    // Consider adding error handling for loading lexicons
-    joyKeywords =
-        await loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
-    sadnessKeywords =
-        await loadEmotionKeywords("assets/txt/sadness-NRC-Emotion-Lexicon.txt");
-    angerKeywords =
-        await loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
+    try {
+      joyKeywords =
+          await loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
+      sadnessKeywords = await loadEmotionKeywords(
+          "assets/txt/sadness-NRC-Emotion-Lexicon.txt");
+      angerKeywords =
+          await loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
 
-    allEmotionKeywords =
-        joyKeywords.union(sadnessKeywords).union(angerKeywords);
+      allEmotionKeywords =
+          joyKeywords.union(sadnessKeywords).union(angerKeywords);
+    } catch (e) {
+      // Handle lexicon loading errors if necessary
+      print("Error loading lexicons: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error loading keyword data. Some features might not work.', style: GoogleFonts.poppins(color: Colors.white)),
+              backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  void _setLoading(bool isLoading) {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = isLoading;
+      if (isLoading) {
+        _loadingMessage1 = null;
+        _loadingMessage2 = null;
+        _loadingMessage3 = null; // Reset third message
+        _loadingTimer1?.cancel();
+        _loadingTimer2?.cancel();
+        _loadingTimer3?.cancel(); // Cancel third timer
+
+        _loadingTimer1 = Timer(const Duration(seconds: 6), () {
+          if (mounted && _isLoading) {
+            setState(() {
+              _loadingMessage1 = "Just a moment...";
+              _loadingMessage2 = null;
+              _loadingMessage3 = null;
+            });
+            _loadingTimer2 = Timer(const Duration(seconds: 6), () {
+              if (mounted && _isLoading) {
+                setState(() {
+                  _loadingMessage1 = null;
+                  _loadingMessage2 = "Almost there...";
+                  _loadingMessage3 = null;
+                });
+                _loadingTimer3 = Timer(const Duration(seconds: 7), () {
+                  if (mounted && _isLoading) {
+                    setState(() {
+                      _loadingMessage1 = null;
+                      _loadingMessage2 = null;
+                      _loadingMessage3 = "Finalizing..."; // Set third message
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+      } else {
+        _loadingTimer1?.cancel();
+        _loadingTimer2?.cancel();
+        _loadingTimer3?.cancel(); // Cancel third timer
+        _loadingMessage1 = null;
+        _loadingMessage2 = null;
+        _loadingMessage3 = null; // Reset third message
+      }
+    });
   }
 
   Future<void> _pickImage({bool fromCamera = false}) async {
     try {
       final pickedFile = await _picker.pickImage(
         source: fromCamera ? ImageSource.camera : ImageSource.gallery,
-        imageQuality: 80, // Optional: compress image slightly
+        imageQuality: 80,
       );
 
       if (pickedFile != null) {
         setState(() {
           _selectedImage = File(pickedFile.path);
-          _keywords = 'Analyzing image...'; // User-friendly processing message
-          _isLoading = true;
+          _keywords = 'Analyzing image...';
+          _isScenery = false; // Reset scenery status
         });
-        _uploadAndAnalyzeImage();
+        _setLoading(true);
+        await _uploadAndAnalyzeImage(); // await here to ensure loading state is accurate
       }
     } catch (e) {
       setState(() {
         _keywords = "Could not select image. Please try again.";
-        _isLoading = false;
       });
+      _setLoading(false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -108,9 +186,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _uploadAndAnalyzeImage() async {
-    try {
-      if (_selectedImage == null) return;
+    // Ensure _isLoading is true at the start of this async operation
+    if (!mounted || _selectedImage == null) {
+      if (_selectedImage == null) {
+         setState(() {
+          _keywords = 'No image selected.';
+        });
+      }
+      _setLoading(false);
+      return;
+    }
 
+    try {
       final imageBytes = await _selectedImage!.readAsBytes();
       final base64Image = base64Encode(imageBytes);
 
@@ -119,7 +206,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           {
             "parts": [
               {
-                "text": "You are an AI image analysis assistant for a Pantun Recommender System. Your task is to analyze an uploaded image and extract 5-7 keywords. These keywords must describe both its visual elements and emotional tone, drawing exclusively from the provided emotional lexicons.\n\n**Primary Task & Image Validation:**\n1. **Scenery Check:** Evaluate if the uploaded image is predominantly a scenery or landscape image.\n   - **Acceptable:** Images focused on natural environments such as grasslands, aquatic biomes (oceans, rivers, lakes), and forest biomes. The presence of people, animals, or objects is acceptable if they are part of the broader scene.\n   - **Not Acceptable:** Images focused on tundra, desert biomes, selfies, isolated portraits, close-ups of single objects, abstract patterns, or screenshots.\n2. If the image is NOT a valid scenery image, respond ONLY with: \"Error: Image is not a valid scenery. Please upload an image of grasslands, aquatic biomes, or forest biomes.\"\n\n**Keyword Extraction (Only for Valid Scenery Images):**\n1. Extract exactly 5-7 keywords.\n2. Use ONLY words from the provided emotional lexicons (Joy, Sadness, Anger).\n3. Interpret visual elements and emotional tone using the lexicons. For example:\n   - A dark, stormy sky → 'Angry', 'Furious', 'Miserable'.\n   - A sunny field → 'Happy', 'Joy', 'Content'.\n4. Select the closest emotional association if no direct match exists.\n5. Ensure the keywords reflect the dominant visual characteristics and emotional tone.\n\n**Lexicons (Strictly Adhere to These):**\n- **Joy:** Happy, Content, Joy, Grateful, Blessed, Smile, Fun, Excited, Laughter, Proud\n- **Sadness:** Lonely, Broken, Disappointed, Depressed, Hurt, Frustrated, Crying, Miserable, Hopeless, Regret\n- **Anger:** Angry, Annoying, Hate, Frustrated, Furious, Outrage, Offensive, Cursing, Idiotic, Condemn\n\n**Output Format:**\n- Provide the final list of keywords as a single, comma-separated string.\n- Example for a stormy sea: `Angry, Furious, Miserable, Hopeless, Frustrated`\n- Example for a sunny meadow: `Happy, Content, Joy, Smile, Grateful`\n\n**Final Check:**\n- Is the image confirmed to be a valid scenery image (grasslands, aquatic biomes, or forest biomes)?\n- Are ALL selected words ONLY from the provided lexicons?\n- Is the total number of keywords between 5 and 7?\n- Is the output a comma-separated list?"
+                "text": "You are an AI image analysis assistant for a Pantun Recommender System. Your task is to analyze an uploaded image and extract 5-7 keywords. These keywords must describe both its visual elements and emotional tone, drawing exclusively from the provided emotional lexicons.\n\n**Primary Task & Image Validation:**\n1. **Scenery Check:** Evaluate if the uploaded image is predominantly a scenery or landscape image.\n   - **Acceptable:** Images focused on natural environments such as grasslands, aquatic biomes (oceans, rivers, lakes), and forest biomes. The presence of people, animals, or objects is acceptable if they are part of the broader scene.\n   - **Not Acceptable:** Images focused on tundra, desert biomes, selfies, isolated portraits, close-ups of single objects, abstract patterns, or screenshots.\n2. If the image is NOT a valid scenery image, respond ONLY with: \"$_invalidSceneryErrorMessage\"\n\n**Keyword Extraction (Only for Valid Scenery Images):**\n1. Extract exactly 5-7 keywords.\n2. Use ONLY words from the provided emotional lexicons (Joy, Sadness, Anger).\n3. Interpret visual elements and emotional tone using the lexicons. For example:\n   - A dark, stormy sky → 'Angry', 'Furious', 'Miserable'.\n   - A sunny field → 'Happy', 'Joy', 'Content'.\n4. Select the closest emotional association if no direct match exists.\n5. Ensure the keywords reflect the dominant visual characteristics and emotional tone.\n\n**Lexicons (Strictly Adhere to These):**\n- **Joy:** Happy, Content, Joy, Grateful, Blessed, Smile, Fun, Excited, Laughter, Proud\n- **Sadness:** Lonely, Broken, Disappointed, Depressed, Hurt, Frustrated, Crying, Miserable, Hopeless, Regret\n- **Anger:** Angry, Annoying, Hate, Frustrated, Furious, Outrage, Offensive, Cursing, Idiotic, Condemn\n\n**Output Format:**\n- Provide the final list of keywords as a single, comma-separated string.\n- Example for a stormy sea: `Angry, Furious, Miserable, Hopeless, Frustrated`\n- Example for a sunny meadow: `Happy, Content, Joy, Smile, Grateful`\n\n**Final Check:**\n- Is the image confirmed to be a valid scenery image (grasslands, aquatic biomes, or forest biomes)?\n- Are ALL selected words ONLY from the provided lexicons?\n- Is the total number of keywords between 5 and 7?\n- Is the output a comma-separated list?"
               },
               {
                 "inlineData": {
@@ -147,20 +234,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
         final parts = result['candidates']?[0]['content']['parts'] as List<dynamic>? ?? [];
-
+        String aiResponseText = "";
         if (parts.isNotEmpty && parts[0]['text'] != null) {
-          print("AI Response Text: '${parts[0]['text'].toString()}'"); // Log the raw response
+          aiResponseText = parts[0]['text'].toString().trim();
+          print("AI Response Text: '$aiResponseText'");
         }
 
-        // Ensure this string EXACTLY matches the error message in your AI prompt
-        final String expectedErrorMessage = "Error: Image is not a valid scenery. Please upload an image of grasslands, aquatic biomes, or forest biomes.";
-
-        // Trim the AI's response text before comparing
-        if (parts.isNotEmpty && parts[0]['text'] != null && parts[0]['text'].toString().trim() == expectedErrorMessage) {
+        if (aiResponseText == _invalidSceneryErrorMessage) {
           setState(() {
-            _keywords = expectedErrorMessage; // Use the same expected message
-            _isScenery = false; // Mark as not a scenery
-            _isLoading = false;
+            _keywords = _invalidSceneryErrorMessage;
+            _isScenery = false;
           });
         } else {
           List<String> extractedWords = parts
@@ -170,30 +253,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               .map((word) => word.trim())
               .where((word) => allEmotionKeywords.contains(word))
               .toList()
-              .take(7) // Take up to 7 valid keywords
+              .take(7)
               .toList();
 
           setState(() {
             _keywords = extractedWords.isNotEmpty
                 ? extractedWords.join(", ")
                 : "Could not extract specific keywords. Feel free to choose an emotion!";
-            _isScenery = true; // Mark as valid scenery
-            _isLoading = false;
+            _isScenery = extractedWords.isNotEmpty; // Be more precise: scenery if keywords found
           });
         }
       } else {
         setState(() {
           _keywords = "Sorry, image analysis failed (Error ${response.statusCode}). Please try again.";
-          _isScenery = false; // Mark as not a scenery
-          _isLoading = false;
+          _isScenery = false;
         });
       }
     } catch (e) {
       setState(() {
         _keywords = 'Error analyzing image. Check connection or try another image.';
-        _isScenery = false; // Mark as not a scenery
-        _isLoading = false;
+        _isScenery = false;
       });
+    } finally {
+      if (mounted) {
+        _setLoading(false);
+      }
     }
   }
 
@@ -220,8 +304,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
 
-    // Additional check for keywords still in initial or analyzing state,
-    // though !_isScenery should cover most non-ready states.
     if (_keywords.startsWith('Upload an image') || _keywords.contains('Analyzing image...')) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -235,7 +317,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    _setLoading(true);
     try {
       final imageKeywordsList = _keywords.split(', ').map((word) => word.trim()).where((word) => word.isNotEmpty).toList();
       
@@ -244,26 +326,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "emotion": _selectedEmotion,
-          "image_keywords": (_keywords.contains("Error") || _keywords.startsWith("Could not extract specific keywords") || _keywords.contains("Analyzing") || _keywords.startsWith("Upload an image"))
-            ? [] // Send empty if keywords are error/status messages or not extracted
+          "image_keywords": (_keywords == _invalidSceneryErrorMessage || _keywords.startsWith("Could not extract specific keywords") || _keywords.contains("Analyzing") || _keywords.startsWith("Upload an image"))
+            ? [] 
             : imageKeywordsList
         }),
       );
 
-      setState(() => _isLoading = false);
-      if (response.statusCode == 200) {
-        var data = jsonDecode(response.body);
-        List<Map<String, dynamic>> pantunResults = List<Map<String, dynamic>>.from(data['pantuns']);
-        if (mounted) {
+      if (mounted) { // Check mounted before further setState or navigation
+        if (response.statusCode == 200) {
+          var data = jsonDecode(response.body);
+          List<Map<String, dynamic>> pantunResults = List<Map<String, dynamic>>.from(data['pantuns']);
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => ResultScreen(result: pantunResults),
             ),
           );
-        }
-      } else {
-        if (mounted) {
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -274,7 +353,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         }
       }
     } catch (e) {
-      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -284,77 +362,125 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             backgroundColor: Colors.redAccent),
         );
       }
+    } finally {
+      if (mounted) {
+        _setLoading(false);
+      }
     }
+  }
+
+  String _getLoadingOverlayText() {
+    String baseText;
+    if (_keywords == 'Analyzing image...' && _currentStep == 0) {
+      baseText = 'Analyzing Image...';
+    } else if (_selectedEmotion != null && _currentStep == 1) {
+      baseText = 'Generating Pantun...';
+    } else {
+      baseText = 'Loading...'; // Fallback
+    }
+
+    String finalText = baseText;
+    if (_loadingMessage3 != null) {
+      finalText += '\n$_loadingMessage3';
+    } else if (_loadingMessage2 != null) {
+      finalText += '\n$_loadingMessage2';
+    } else if (_loadingMessage1 != null) {
+      finalText += '\n$_loadingMessage1';
+    }
+    return finalText;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: maroonGradientBackground),
-        child: Column(
-          children: [
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 15.0, bottom: 5.0), // Adjusted padding
-                child: LinearProgressIndicator(
-                  value: (_currentStep + 1) / 2,
-                  backgroundColor: goldText.withOpacity(0.3),
-                  valueColor: const AlwaysStoppedAnimation<Color>(goldText),
-                  minHeight: 6, // Slightly thicker progress bar
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(gradient: maroonGradientBackground),
+            child: Column(
+              children: [
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 15.0, left: 16.0, right: 16.0), // Added horizontal padding
+                    child: Column( // Wrap Progress and Text
+                      children: [
+                        LinearProgressIndicator(
+                          value: (_currentStep + 1) / 2,
+                          backgroundColor: goldText.withOpacity(0.3),
+                          valueColor: const AlwaysStoppedAnimation<Color>(goldText),
+                          minHeight: 6,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6.0, bottom: 4.0),
+                          child: Text(
+                            _currentStep == 0 ? "Step 1 of 2" : "Step 2 of 2",
+                            style: GoogleFonts.poppins(color: lightGoldAccent.withOpacity(0.9), fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentStep = index;
+                      });
+                    },
+                    physics: const ClampingScrollPhysics(),
+                    children: [
+                      _imageInputScreen(),
+                      _emotionSelectionScreen(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.65), // Darker overlay
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(goldText)),
+                      const SizedBox(height: 20),
+                      Text(
+                        _getLoadingOverlayText(),
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(color: goldText, fontSize: 17, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentStep = index;
-                  });
-                },
-                physics: const ClampingScrollPhysics(), // Good choice
-                children: [
-                  _imageInputScreen(),
-                  _emotionSelectionScreen(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _styledCard({required Widget child}) {
-    return Card(
-      elevation: 3, // Slightly reduced elevation
-      color: cardBackgroundColor, // Using the new card background color
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12), // Slightly smaller radius
-        side: BorderSide(color: goldText.withOpacity(0.4), width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0), // Adjusted padding
-        child: child,
+        ],
       ),
     );
   }
 
   Widget _imageInputScreen() {
+    bool showSceneryError = !_isScenery && _keywords == _invalidSceneryErrorMessage && _selectedImage != null;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0), // Adjusted padding
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: 60),
+          const SizedBox(height: 60),
           Text(
-            'Step 1: Upload Scenery', // Shortened title
+            'Step 1: Upload Scenery',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              fontSize: 28, // Reduced font size
-              fontWeight: FontWeight.w600, // Added weight
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
               color: goldText,
             ),
           ),
@@ -367,28 +493,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               color: lightGoldAccent,
             ),
           ),
-          const SizedBox(height: 35), // Increased spacing
+          const SizedBox(height: 35),
           GestureDetector(
-            onTap: () => _pickImage(fromCamera: false), // Add option for camera later if needed
+            onTap: _isLoading ? null : () => _pickImage(fromCamera: false),
             child: Container(
-              width: double.infinity, // Make it wider
-              constraints: const BoxConstraints(maxWidth: 250, maxHeight: 180),
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 250, minHeight: 180, maxHeight: 180),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: goldText.withOpacity(0.7), width: 2),
               ),
-              child: _selectedImage != null
+              child: _selectedImage != null // Directly show image or placeholder
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(13),
                       child: Image.file(_selectedImage!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
                     )
-                  : Column(
+                  : Column( // Placeholder content
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.landscape_outlined,
-                          size: 50, // Slightly smaller icon
+                          size: 50,
                           color: goldText,
                         ),
                         const SizedBox(height: 12),
@@ -403,28 +529,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
             ),
           ),
-          const SizedBox(height: 25), // Increased spacing
-          if (!_isScenery && _keywords.contains("Error")) 
-            Padding(
+          const SizedBox(height: 25),
+          if (showSceneryError)
+            Container(
+              margin: const EdgeInsets.only(top: 0, bottom: 10),
+              padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.redAccent.withOpacity(0.6), width: 1),
+              ),
+              child: Text(
+                _keywords,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(color: Colors.red.shade300, fontSize: 14.5, fontWeight: FontWeight.w500),
+              ),
+            )
+          else if (_selectedImage != null && !_isLoading && _keywords != 'Analyzing image...' && _keywords != _invalidSceneryErrorMessage && !_keywords.startsWith("Upload an image"))
+             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10.0),
               child: Text(
-                _keywords, // Display the error message
+                "Keywords: $_keywords",
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: Colors.redAccent, fontSize: 15),
+                style: GoogleFonts.poppins(color: lightGoldAccent, fontSize: 14),
               ),
             ),
-          const SizedBox(height: 35), // Increased spacing
+          const SizedBox(height: 15),
           ElevatedButton(
             onPressed: _selectedImage != null && !_isLoading && _isScenery
                 ? () => _pageController.nextPage(
                       duration: const Duration(milliseconds: 400),
                       curve: Curves.easeInOut,
                     )
-                : null, // Disabled if no image, loading, or not a scenery
+                : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: darkTealButton,
               foregroundColor: goldText,
-              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16), // Adjusted padding
+              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
@@ -432,9 +573,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: const Text('Next Step'),
           ),
-          const SizedBox(height: 20), // Increased spacing
+          const SizedBox(height: 20),
           TextButton(
-            onPressed: () {
+            onPressed: _isLoading ? null : () { // Disable when loading
               if (Navigator.canPop(context)) {
                 Navigator.pop(context);
               }
@@ -443,14 +584,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               'Back to Home',
               style: GoogleFonts.poppins(
                 fontSize: 16,
-                color: goldText,
+                color: _isLoading ? goldText.withOpacity(0.5) : goldText,
                 decoration: TextDecoration.underline,
                 decorationColor: goldText.withOpacity(0.8),
                 decorationThickness: 1.5,
               ),
             ),
           ),
-          const SizedBox(height: 20), // Bottom padding
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -458,17 +599,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _emotionSelectionScreen() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0), // Adjusted padding
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: 80),
+          const SizedBox(height: 80),
           Text(
-            'Step 2: Choose Emotion', // Shortened title
+            'Step 2: Choose Emotion',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              fontSize: 28, // Reduced font size
-              fontWeight: FontWeight.w600, // Added weight
+              fontSize: 28,
+              fontWeight: FontWeight.w600,
               color: goldText,
             ),
           ),
@@ -481,41 +622,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               color: lightGoldAccent,
             ),
           ),
-          const SizedBox(height: 70), // Increased spacing
+          const SizedBox(height: 70),
           Wrap(
-            spacing: 18.0, // Adjusted spacing
-            runSpacing: 18.0, // Adjusted spacing
+            spacing: 18.0,
+            runSpacing: 18.0,
             alignment: WrapAlignment.center,
             children: [
-              // Ensure you have these assets in assets/images/ and declared in pubspec.yaml
               _emotionButton('Happy', 'assets/images/happy.png'),
               _emotionButton('Angry', 'assets/images/angry.png'),
               _emotionButton('Sad', 'assets/images/sad.png'),
             ],
           ),
-          const SizedBox(height: 70), // Increased spacing
+          const SizedBox(height: 70),
           ElevatedButton(
             onPressed: _selectedEmotion != null && !_isLoading ? _fetchPantunRecommendations : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: darkTealButton,
               foregroundColor: goldText,
-              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16), // Adjusted padding
+              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
               textStyle: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
             ),
-            child: _isLoading && _selectedEmotion != null // Show loader only if this button initiated loading
-                ? const SizedBox(
-                    width: 24, height: 24,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(goldText)))
-                : const Text('Generate Pantun'),
+            // Removed the internal CircularProgressIndicator as global loader handles it
+            child: const Text('Generate Pantun'),
           ),
-          const SizedBox(height: 25), // Increased spacing
+          const SizedBox(height: 25),
           TextButton(
-            onPressed: () => _pageController.previousPage(
+            onPressed: _isLoading ? null : () => _pageController.previousPage( // Disable when loading
               duration: const Duration(milliseconds: 400),
               curve: Curves.easeInOut,
             ),
@@ -523,14 +658,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               'Go Back',
               style: GoogleFonts.poppins(
                 fontSize: 16,
-                color: goldText,
+                color: _isLoading ? goldText.withOpacity(0.5) : goldText,
                 decoration: TextDecoration.underline,
                 decorationColor: goldText.withOpacity(0.8),
                 decorationThickness: 1.5,
               ),
             ),
           ),
-          const SizedBox(height: 20), // Bottom padding
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -539,58 +674,61 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _emotionButton(String emotion, String assetPath) {
     final bool isSelected = _selectedEmotion == emotion;
     return GestureDetector(
-      onTap: () {
+      onTap: _isLoading ? null : () { // Disable tap when loading
         setState(() {
           _selectedEmotion = emotion;
         });
       },
-      child: Container(
-        width: 80, // Keep width
-        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 5), // Adjusted padding
-        decoration: BoxDecoration(
-          color: isSelected ? darkTealButton.withOpacity(0.85) : Colors.black.withOpacity(0.25),
-          borderRadius: BorderRadius.circular(12), // Slightly smaller radius
-          border: Border.all(
-            color: isSelected ? goldText : goldText.withOpacity(0.5),
-            width: isSelected ? 2.2 : 1.5, // Adjusted border width
+      child: Opacity( // Dim button if loading
+        opacity: _isLoading ? 0.6 : 1.0,
+        child: Container(
+          width: 80,
+          padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 5),
+          decoration: BoxDecoration(
+            color: isSelected ? darkTealButton.withOpacity(0.85) : Colors.black.withOpacity(0.25),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isSelected ? goldText : goldText.withOpacity(0.5),
+              width: isSelected ? 2.2 : 1.5,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: darkTealButton.withOpacity(0.4),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    )
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    )
+                ],
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: darkTealButton.withOpacity(0.4),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  )
-                ]
-              : [
-                  BoxShadow( // Subtle shadow for unselected too
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  )
-              ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              assetPath,
-              width: 40, // Slightly smaller icon
-              height: 40, // Slightly smaller icon
-              errorBuilder: (context, error, stackTrace) => Icon( // Fallback icon
-                Icons.sentiment_neutral, size: 40, color: isSelected ? Colors.white : goldText,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                assetPath,
+                width: 40,
+                height: 40,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.sentiment_neutral, size: 40, color: isSelected ? Colors.white : goldText,
+                ),
               ),
-            ),
-            const SizedBox(height: 8), // Adjusted spacing
-            Text(
-              emotion,
-              style: GoogleFonts.poppins(
-                fontSize: 14, // Slightly smaller font
-                fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : goldText,
+              const SizedBox(height: 8),
+              Text(
+                emotion,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isSelected ? Colors.white : goldText,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
