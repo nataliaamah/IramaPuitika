@@ -396,11 +396,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     // Define some responsive scaling factors or direct calculations
-    final double titleFontSize = screenWidth * 0.07; // e.g., 28 on a 400dp width screen
-    final double subtitleFontSize = screenWidth * 0.04; // e.g., 16
-    final double bodyFontSize = screenWidth * 0.035; // e.g., 14
-    final double buttonTextFontSize = screenWidth * 0.045; // e.g., 18
-    final double smallTextFontSize = screenWidth * 0.032; // e.g., 13
+    final double titleFontSize = screenWidth * 0.07;
+    final double subtitleFontSize = screenWidth * 0.04;
+    final double bodyFontSize = screenWidth * 0.035;
+    final double buttonTextFontSize = screenWidth * 0.045;
+    final double smallTextFontSize = screenWidth * 0.032;
+
+    // Determine if swiping from step 1 to step 2 should be allowed
+    bool canProceedFromStep1 = _selectedImage != null && !_isLoading && _isScenery;
+    ScrollPhysics pageViewPhysics = const ClampingScrollPhysics(); // Default physics
+
+    if (_currentStep == 0 && !canProceedFromStep1) {
+      pageViewPhysics = const NeverScrollableScrollPhysics();
+    } else if (_currentStep == 1 && _isLoading) { // Also prevent swiping back from step 2 if loading
+      pageViewPhysics = const NeverScrollableScrollPhysics();
+    }
 
     return Scaffold(
       body: Stack(
@@ -422,11 +432,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           value: (_currentStep + 1) / 2,
                           backgroundColor: goldText.withOpacity(0.3),
                           valueColor: const AlwaysStoppedAnimation<Color>(goldText),
-                          minHeight: screenHeight * 0.008, // Responsive minHeight
+                          minHeight: screenHeight * 0.008,
                         ),
                         Padding(
                           padding: EdgeInsets.only(top: screenHeight * 0.008, bottom: screenHeight * 0.005),
                           child: Text(
+                            // Restored full text for clarity
                             _currentStep == 0 ? "Step 1 of 2" : "Step 2 of 2",
                             style: GoogleFonts.poppins(
                                 color: lightGoldAccent.withOpacity(0.9),
@@ -444,9 +455,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     onPageChanged: (index) {
                       setState(() {
                         _currentStep = index;
+                        // Recalculate physics when page changes, though primary control is on build
                       });
                     },
-                    physics: const ClampingScrollPhysics(),
+                    physics: pageViewPhysics, // Apply dynamic physics here
                     children: [
                       _imageInputScreen(screenWidth, screenHeight, titleFontSize, subtitleFontSize, bodyFontSize, buttonTextFontSize, smallTextFontSize),
                       _emotionSelectionScreen(screenWidth, screenHeight, titleFontSize, subtitleFontSize, buttonTextFontSize, smallTextFontSize),
