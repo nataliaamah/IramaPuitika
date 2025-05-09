@@ -34,8 +34,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final ImagePicker _picker = ImagePicker();
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM'; // IMPORTANT: Secure your API key
   final String endpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-03-25:generateContent';
-  final String flaskApiUrl = "http://172.20.10.6:5000/recommend"; // IMPORTANT: Local IP
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent';
+  final String flaskApiUrl = "https://pantun-api-service-360024071473.asia-southeast1.run.app/recommend"; //
 
   // Specific error message string for scenery validation
   final String _invalidSceneryErrorMessage = "Error: Image is not a valid scenery. Please upload an image of grasslands, aquatic biomes, or forest biomes.";
@@ -230,6 +230,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(requestBody),
       );
+
+      debugPrint("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
