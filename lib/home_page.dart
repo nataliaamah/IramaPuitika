@@ -3,7 +3,6 @@ import 'package:flutter/services.dart'; // For HapticFeedback
 import 'onboarding_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
-import 'dart:math' as math; // For pi
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

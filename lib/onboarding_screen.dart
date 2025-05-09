@@ -21,14 +21,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String? _selectedEmotion;
   bool _isLoading = false;
   int _currentStep = 0;
+  bool _isScenery = false; // Add this flag to track if the image is a scenery
 
   final ImagePicker _picker = ImagePicker();
   // IMPORTANT: Secure your API key in a production environment.
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM';
   final String endpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent';
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-03-25:generateContent';
   // IMPORTANT: This is a local IP. For wider use, deploy your Flask API.
-  final String flaskApiUrl = "http://172.20.10.6:5000/recommend";
+  final String flaskApiUrl = "http://192.168.132.34:5000/recommend";
 
   Set<String> joyKeywords = {};
   Set<String> sadnessKeywords = {};
@@ -118,16 +119,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           {
             "parts": [
               {
-                "text": "Analyze the given image and extract 5-7 keywords that best describe both its visual elements and emotional tone."
-                    "\nYou MUST strictly choose words only from the predefined lexicons below. Do NOT add new words."
-                    "\nIf no word from the list applies to the scene, select the closest matching words from the lexicon."
-                    "\nThe final output should be a mix of descriptive and emotional words from this predefined list."
-                    "\nOnly use words from the following lexicons:"
-                    "\nJoy: ${joyKeywords.join(', ')}"
-                    "\nSadness: ${sadnessKeywords.join(', ')}"
-                    "\nAnger: ${angerKeywords.join(', ')}"
-                    "\nDO NOT generate words outside this list. If a word is not in the list, exclude it."
-                    "\nFormat the output as a comma-separated list: keyword1, keyword2, keyword3, ..."
+                "text": "You are an AI image analysis assistant for a Pantun Recommender System. Your task is to analyze an uploaded image and extract 5-7 keywords. These keywords must describe both its visual elements and emotional tone, drawing exclusively from the provided emotional lexicons.\n\n**Primary Task & Image Validation:**\n1. **Scenery Check:** Evaluate if the uploaded image is predominantly a scenery or landscape image.\n   - **Acceptable:** Images focused on natural environments such as grasslands, aquatic biomes (oceans, rivers, lakes), and forest biomes. The presence of people, animals, or objects is acceptable if they are part of the broader scene.\n   - **Not Acceptable:** Images focused on tundra, desert biomes, selfies, isolated portraits, close-ups of single objects, abstract patterns, or screenshots.\n2. If the image is NOT a valid scenery image, respond ONLY with: \"Error: Image is not a valid scenery. Please upload an image of grasslands, aquatic biomes, or forest biomes.\"\n\n**Keyword Extraction (Only for Valid Scenery Images):**\n1. Extract exactly 5-7 keywords.\n2. Use ONLY words from the provided emotional lexicons (Joy, Sadness, Anger).\n3. Interpret visual elements and emotional tone using the lexicons. For example:\n   - A dark, stormy sky → 'Angry', 'Furious', 'Miserable'.\n   - A sunny field → 'Happy', 'Joy', 'Content'.\n4. Select the closest emotional association if no direct match exists.\n5. Ensure the keywords reflect the dominant visual characteristics and emotional tone.\n\n**Lexicons (Strictly Adhere to These):**\n- **Joy:** Happy, Content, Joy, Grateful, Blessed, Smile, Fun, Excited, Laughter, Proud\n- **Sadness:** Lonely, Broken, Disappointed, Depressed, Hurt, Frustrated, Crying, Miserable, Hopeless, Regret\n- **Anger:** Angry, Annoying, Hate, Frustrated, Furious, Outrage, Offensive, Cursing, Idiotic, Condemn\n\n**Output Format:**\n- Provide the final list of keywords as a single, comma-separated string.\n- Example for a stormy sea: `Angry, Furious, Miserable, Hopeless, Frustrated`\n- Example for a sunny meadow: `Happy, Content, Joy, Smile, Grateful`\n\n**Final Check:**\n- Is the image confirmed to be a valid scenery image (grasslands, aquatic biomes, or forest biomes)?\n- Are ALL selected words ONLY from the provided lexicons?\n- Is the total number of keywords between 5 and 7?\n- Is the output a comma-separated list?"
               },
               {
                 "inlineData": {
@@ -142,7 +134,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           "temperature": 0.5,
           "topK": 40,
           "topP": 0.9,
-          "maxOutputTokens": 50
+          "maxOutputTokens": 10000,
         }
       };
 
@@ -156,74 +148,104 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         final result = jsonDecode(response.body);
         final parts = result['candidates']?[0]['content']['parts'] as List<dynamic>? ?? [];
 
-        List<String> extractedWords = parts
-            .where((part) => part['text'] != null)
-            .map((part) => part['text'].toString().toLowerCase().trim())
-            .expand((text) => text.split(','))
-            .map((word) => word.trim())
-            .where((word) => allEmotionKeywords.contains(word))
-            .toList()
-            .take(7) // Take up to 7 valid keywords
-            .toList();
-
-        setState(() {
-          _keywords = extractedWords.isNotEmpty
-              ? extractedWords.join(", ")
-              : "Could not extract specific keywords. Feel free to choose an emotion!"; // User-friendly message
-          _isLoading = false;
-        });
-      } else {
-        // User-friendly error message based on status code
-        String errorMessage;
-        if (response.statusCode == 429) {
-          errorMessage = "Analysis service is busy. Please try again in a moment.";
-        } else {
-          errorMessage = "Sorry, image analysis failed (Error ${response.statusCode}). Please try again.";
+        if (parts.isNotEmpty && parts[0]['text'] != null) {
+          print("AI Response Text: '${parts[0]['text'].toString()}'"); // Log the raw response
         }
+
+        // Ensure this string EXACTLY matches the error message in your AI prompt
+        final String expectedErrorMessage = "Error: Image is not a valid scenery. Please upload an image of grasslands, aquatic biomes, or forest biomes.";
+
+        // Trim the AI's response text before comparing
+        if (parts.isNotEmpty && parts[0]['text'] != null && parts[0]['text'].toString().trim() == expectedErrorMessage) {
+          setState(() {
+            _keywords = expectedErrorMessage; // Use the same expected message
+            _isScenery = false; // Mark as not a scenery
+            _isLoading = false;
+          });
+        } else {
+          List<String> extractedWords = parts
+              .where((part) => part['text'] != null)
+              .map((part) => part['text'].toString().toLowerCase().trim())
+              .expand((text) => text.split(','))
+              .map((word) => word.trim())
+              .where((word) => allEmotionKeywords.contains(word))
+              .toList()
+              .take(7) // Take up to 7 valid keywords
+              .toList();
+
+          setState(() {
+            _keywords = extractedWords.isNotEmpty
+                ? extractedWords.join(", ")
+                : "Could not extract specific keywords. Feel free to choose an emotion!";
+            _isScenery = true; // Mark as valid scenery
+            _isLoading = false;
+          });
+        }
+      } else {
         setState(() {
-          _keywords = errorMessage;
+          _keywords = "Sorry, image analysis failed (Error ${response.statusCode}). Please try again.";
+          _isScenery = false; // Mark as not a scenery
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        // User-friendly generic error
         _keywords = 'Error analyzing image. Check connection or try another image.';
+        _isScenery = false; // Mark as not a scenery
         _isLoading = false;
       });
     }
   }
 
- Future<void> _fetchPantunRecommendations() async {
-    if (_selectedEmotion == null || _keywords.startsWith('Upload an image') || _keywords.contains('Analyzing image...') || _keywords.contains('Error') || _keywords.contains('Could not')) {
+  Future<void> _fetchPantunRecommendations() async {
+    String? errorMessage;
+    if (_selectedEmotion == null && !_isScenery) {
+      errorMessage = 'Please upload a valid scenery image and select an emotion.';
+    } else if (_selectedEmotion == null) {
+      errorMessage = 'Please select an emotion first.';
+    } else if (!_isScenery) {
+      errorMessage = 'Please upload a valid scenery image. The previous image was not suitable or analysis failed.';
+    }
+
+    if (errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Please upload an image and select an emotion first.',
+            errorMessage,
             style: GoogleFonts.poppins(color: Colors.white),
           ),
-          backgroundColor: Colors.orangeAccent, // Changed color for warning
+          backgroundColor: Colors.orangeAccent,
         ),
       );
       return;
     }
+
+    // Additional check for keywords still in initial or analyzing state,
+    // though !_isScenery should cover most non-ready states.
+    if (_keywords.startsWith('Upload an image') || _keywords.contains('Analyzing image...')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Image analysis may not be complete or no image was processed successfully.',
+            style: GoogleFonts.poppins(color: Colors.white),
+          ),
+          backgroundColor: Colors.orangeAccent,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final imageKeywordsList = _keywords.split(', ').map((word) => word.trim()).where((word) => word.isNotEmpty).toList();
       
-      // If keywords failed to extract, send an empty list or a placeholder.
-      // Here, we are sending what we have, which might be an error message if analysis failed.
-      // The backend should ideally handle cases where keywords are not as expected.
-      // For now, we proceed, but this logic could be refined based on API requirements.
-
       var response = await http.post(
         Uri.parse(flaskApiUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "emotion": _selectedEmotion,
-          // Ensure keywords are only sent if they are actual keywords, not error messages.
-          "image_keywords": imageKeywordsList.any((k) => k.contains(" ") || k.length > 15) && ( _keywords.contains("Error") || _keywords.contains("Could not") || _keywords.contains("Analyzing"))
-            ? [] // Send empty if keywords are likely error/status messages
+          "image_keywords": (_keywords.contains("Error") || _keywords.startsWith("Could not extract specific keywords") || _keywords.contains("Analyzing") || _keywords.startsWith("Upload an image"))
+            ? [] // Send empty if keywords are error/status messages or not extracted
             : imageKeywordsList
         }),
       );
@@ -326,7 +348,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: 80),
+          SizedBox(height: 60),
           Text(
             'Step 1: Upload Scenery', // Shortened title
             textAlign: TextAlign.center,
@@ -382,59 +404,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 25), // Increased spacing
-          /*
-          // Conditional display for loading or keywords
-          if (_isLoading && _selectedImage != null && _keywords.contains('Analyzing'))
+          if (!_isScenery && _keywords.contains("Error")) 
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(
-                    width: 20, height: 20,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(goldText),
-                      strokeWidth: 2.5,
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Text(
-                    _keywords, // "Analyzing image..."
-                    style: GoogleFonts.poppins(color: lightGoldAccent, fontSize: 15),
-                  )
-                ],
-              ),
-            )
-          else if (_selectedImage != null) // Show keywords or error message from analysis
-            _styledCard(
               child: Text(
-                "Scene Keywords: $_keywords",
+                _keywords, // Display the error message
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  color: lightGoldAccent, // Text color for inside the card
-                  height: 1.4, // Improved line spacing
-                ),
-              ),
-            )
-          else // Default message if no image is selected yet
-             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10.0),
-              child: Text(
-                _keywords, // "Upload an image to see scene keywords."
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: lightGoldAccent.withOpacity(0.8), fontSize: 15),
+                style: GoogleFonts.poppins(color: Colors.redAccent, fontSize: 15),
               ),
             ),
-          */
           const SizedBox(height: 35), // Increased spacing
           ElevatedButton(
-            onPressed: _selectedImage != null && !_isLoading && !_keywords.contains('Analyzing') && !_keywords.contains('Error') && !_keywords.contains('Could not')
+            onPressed: _selectedImage != null && !_isLoading && _isScenery
                 ? () => _pageController.nextPage(
                       duration: const Duration(milliseconds: 400),
                       curve: Curves.easeInOut,
                     )
-                : null, // Disabled if no image, loading, or error in keywords
+                : null, // Disabled if no image, loading, or not a scenery
             style: ElevatedButton.styleFrom(
               backgroundColor: darkTealButton,
               foregroundColor: goldText,
@@ -476,7 +462,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: 100),
+          SizedBox(height: 80),
           Text(
             'Step 2: Choose Emotion', // Shortened title
             textAlign: TextAlign.center,
@@ -559,8 +545,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         });
       },
       child: Container(
-        width: 100, // Keep width
-        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 10), // Adjusted padding
+        width: 80, // Keep width
+        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 5), // Adjusted padding
         decoration: BoxDecoration(
           color: isSelected ? darkTealButton.withOpacity(0.85) : Colors.black.withOpacity(0.25),
           borderRadius: BorderRadius.circular(12), // Slightly smaller radius
