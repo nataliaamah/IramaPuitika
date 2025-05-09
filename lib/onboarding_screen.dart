@@ -392,6 +392,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Define some responsive scaling factors or direct calculations
+    final double titleFontSize = screenWidth * 0.07; // e.g., 28 on a 400dp width screen
+    final double subtitleFontSize = screenWidth * 0.04; // e.g., 16
+    final double bodyFontSize = screenWidth * 0.035; // e.g., 14
+    final double buttonTextFontSize = screenWidth * 0.045; // e.g., 18
+    final double smallTextFontSize = screenWidth * 0.032; // e.g., 13
+
     return Scaffold(
       body: Stack(
         children: [
@@ -402,20 +412,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 SafeArea(
                   bottom: false,
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 15.0, left: 16.0, right: 16.0), // Added horizontal padding
-                    child: Column( // Wrap Progress and Text
+                    padding: EdgeInsets.only(
+                        top: screenHeight * 0.02,
+                        left: screenWidth * 0.04,
+                        right: screenWidth * 0.04),
+                    child: Column(
                       children: [
                         LinearProgressIndicator(
                           value: (_currentStep + 1) / 2,
                           backgroundColor: goldText.withOpacity(0.3),
                           valueColor: const AlwaysStoppedAnimation<Color>(goldText),
-                          minHeight: 6,
+                          minHeight: screenHeight * 0.008, // Responsive minHeight
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(top: 6.0, bottom: 4.0),
+                          padding: EdgeInsets.only(top: screenHeight * 0.008, bottom: screenHeight * 0.005),
                           child: Text(
                             _currentStep == 0 ? "Step 1 of 2" : "Step 2 of 2",
-                            style: GoogleFonts.poppins(color: lightGoldAccent.withOpacity(0.9), fontSize: 13),
+                            style: GoogleFonts.poppins(
+                                color: lightGoldAccent.withOpacity(0.9),
+                                fontSize: smallTextFontSize),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -433,8 +448,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     },
                     physics: const ClampingScrollPhysics(),
                     children: [
-                      _imageInputScreen(),
-                      _emotionSelectionScreen(),
+                      _imageInputScreen(screenWidth, screenHeight, titleFontSize, subtitleFontSize, bodyFontSize, buttonTextFontSize, smallTextFontSize),
+                      _emotionSelectionScreen(screenWidth, screenHeight, titleFontSize, subtitleFontSize, buttonTextFontSize, smallTextFontSize),
                     ],
                   ),
                 ),
@@ -444,17 +459,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           if (_isLoading)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.65), // Darker overlay
+                color: Colors.black.withOpacity(0.65),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(goldText)),
-                      const SizedBox(height: 20),
+                      SizedBox(height: screenHeight * 0.025),
                       Text(
                         _getLoadingOverlayText(),
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(color: goldText, fontSize: 17, fontWeight: FontWeight.w500),
+                        style: GoogleFonts.poppins(
+                            color: goldText,
+                            fontSize: subtitleFontSize * 1.05, // Slightly larger than subtitle
+                            fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -466,62 +484,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _imageInputScreen() {
+  Widget _imageInputScreen(double screenWidth, double screenHeight, double titleFs, double subtitleFs, double bodyFs, double buttonFs, double smallFs) {
     bool showSceneryError = !_isScenery && _keywords == _invalidSceneryErrorMessage && _selectedImage != null;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.02),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 60),
+          SizedBox(height: screenHeight * 0.05), // Adjusted
           Text(
             'Step 1: Upload Scenery',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              fontSize: 28,
+              fontSize: titleFs,
               fontWeight: FontWeight.w600,
               color: goldText,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: screenHeight * 0.015),
           Text(
             'Choose a scenery image that resonates with you.',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              fontSize: 16,
+              fontSize: subtitleFs,
               color: lightGoldAccent,
             ),
           ),
-          const SizedBox(height: 35),
+          SizedBox(height: screenHeight * 0.04),
           GestureDetector(
             onTap: _isLoading ? null : () => _pickImage(fromCamera: false),
             child: Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(maxWidth: 250, minHeight: 180, maxHeight: 180),
+              width: screenWidth * 0.7, // Responsive width
+              constraints: BoxConstraints(
+                maxWidth: screenWidth * 0.7, // Max width based on screen
+                minHeight: screenHeight * 0.22, // Min height based on screen
+                maxHeight: screenHeight * 0.25, // Max height based on screen
+              ),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.25),
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(color: goldText.withOpacity(0.7), width: 2),
               ),
-              child: _selectedImage != null // Directly show image or placeholder
+              child: _selectedImage != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(13),
                       child: Image.file(_selectedImage!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
                     )
-                  : Column( // Placeholder content
+                  : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.landscape_outlined,
-                          size: 50,
+                          size: screenWidth * 0.12, // Responsive icon size
                           color: goldText,
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: screenHeight * 0.015),
                         Text(
                           'Tap to Upload Scenery',
                           style: GoogleFonts.poppins(
-                            fontSize: 16,
+                            fontSize: subtitleFs * 0.9, // Slightly smaller subtitle
                             color: goldText,
                           ),
                         ),
@@ -529,11 +551,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
             ),
           ),
-          const SizedBox(height: 25),
+          SizedBox(height: screenHeight * 0.03),
           if (showSceneryError)
             Container(
-              margin: const EdgeInsets.only(top: 0, bottom: 10),
-              padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 12.0),
+              margin: EdgeInsets.only(top: 0, bottom: screenHeight * 0.01),
+              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.012, horizontal: screenWidth * 0.03),
               decoration: BoxDecoration(
                 color: Colors.redAccent.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(8),
@@ -542,19 +564,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Text(
                 _keywords,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: Colors.red.shade300, fontSize: 14.5, fontWeight: FontWeight.w500),
+                style: GoogleFonts.poppins(color: Colors.red.shade300, fontSize: bodyFs * 0.95, fontWeight: FontWeight.w500),
               ),
             )
           else if (_selectedImage != null && !_isLoading && _keywords != 'Analyzing image...' && _keywords != _invalidSceneryErrorMessage && !_keywords.startsWith("Upload an image"))
              Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10.0),
+              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.012),
               child: Text(
                 "Keywords: $_keywords",
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: lightGoldAccent, fontSize: 14),
+                style: GoogleFonts.poppins(color: lightGoldAccent, fontSize: bodyFs),
               ),
             ),
-          const SizedBox(height: 15),
+          SizedBox(height: screenHeight * 0.02),
           ElevatedButton(
             onPressed: _selectedImage != null && !_isLoading && _isScenery
                 ? () => _pageController.nextPage(
@@ -565,17 +587,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: darkTealButton,
               foregroundColor: goldText,
-              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16),
+              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.12, vertical: screenHeight * 0.018),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
-              textStyle: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+              textStyle: GoogleFonts.poppins(fontSize: buttonFs, fontWeight: FontWeight.w600),
             ),
             child: const Text('Next Step'),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: screenHeight * 0.02),
           TextButton(
-            onPressed: _isLoading ? null : () { // Disable when loading
+            onPressed: _isLoading ? null : () {
               if (Navigator.canPop(context)) {
                 Navigator.pop(context);
               }
@@ -583,7 +605,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Text(
               'Back to Home',
               style: GoogleFonts.poppins(
-                fontSize: 16,
+                fontSize: subtitleFs * 0.9,
                 color: _isLoading ? goldText.withOpacity(0.5) : goldText,
                 decoration: TextDecoration.underline,
                 decorationColor: goldText.withOpacity(0.8),
@@ -591,73 +613,72 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: screenHeight * 0.02),
         ],
       ),
     );
   }
 
-  Widget _emotionSelectionScreen() {
+  Widget _emotionSelectionScreen(double screenWidth, double screenHeight, double titleFs, double subtitleFs, double buttonFs, double smallFs) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.02),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 80),
+          SizedBox(height: screenHeight * 0.08),
           Text(
             'Step 2: Choose Emotion',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              fontSize: 28,
+              fontSize: titleFs,
               fontWeight: FontWeight.w600,
               color: goldText,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: screenHeight * 0.015),
           Text(
             'How are you feeling right now?',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              fontSize: 16,
+              fontSize: subtitleFs,
               color: lightGoldAccent,
             ),
           ),
-          const SizedBox(height: 70),
+          SizedBox(height: screenHeight * 0.07),
           Wrap(
-            spacing: 18.0,
-            runSpacing: 18.0,
+            spacing: screenWidth * 0.04, // Responsive spacing
+            runSpacing: screenHeight * 0.02, // Responsive runSpacing
             alignment: WrapAlignment.center,
             children: [
-              _emotionButton('Happy', 'assets/images/happy.png'),
-              _emotionButton('Angry', 'assets/images/angry.png'),
-              _emotionButton('Sad', 'assets/images/sad.png'),
+              _emotionButton('Happy', 'assets/images/happy.png', screenWidth, screenHeight, subtitleFs * 0.85),
+              _emotionButton('Angry', 'assets/images/angry.png', screenWidth, screenHeight, subtitleFs * 0.85),
+              _emotionButton('Sad', 'assets/images/sad.png', screenWidth, screenHeight, subtitleFs * 0.85),
             ],
           ),
-          const SizedBox(height: 70),
+          SizedBox(height: screenHeight * 0.07),
           ElevatedButton(
             onPressed: _selectedEmotion != null && !_isLoading ? _fetchPantunRecommendations : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: darkTealButton,
               foregroundColor: goldText,
-              padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16),
+              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.12, vertical: screenHeight * 0.018),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
-              textStyle: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+              textStyle: GoogleFonts.poppins(fontSize: buttonFs, fontWeight: FontWeight.w600),
             ),
-            // Removed the internal CircularProgressIndicator as global loader handles it
             child: const Text('Generate Pantun'),
           ),
-          const SizedBox(height: 25),
+          SizedBox(height: screenHeight * 0.025),
           TextButton(
-            onPressed: _isLoading ? null : () => _pageController.previousPage( // Disable when loading
+            onPressed: _isLoading ? null : () => _pageController.previousPage(
               duration: const Duration(milliseconds: 400),
               curve: Curves.easeInOut,
             ),
             child: Text(
               'Go Back',
               style: GoogleFonts.poppins(
-                fontSize: 16,
+                fontSize: subtitleFs * 0.9,
                 color: _isLoading ? goldText.withOpacity(0.5) : goldText,
                 decoration: TextDecoration.underline,
                 decorationColor: goldText.withOpacity(0.8),
@@ -665,25 +686,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: screenHeight * 0.02),
         ],
       ),
     );
   }
 
-  Widget _emotionButton(String emotion, String assetPath) {
+  Widget _emotionButton(String emotion, String assetPath, double screenWidth, double screenHeight, double textFs) {
     final bool isSelected = _selectedEmotion == emotion;
+    final double buttonSize = screenWidth * 0.25; // Responsive button width/height base
+
     return GestureDetector(
-      onTap: _isLoading ? null : () { // Disable tap when loading
+      onTap: _isLoading ? null : () {
         setState(() {
           _selectedEmotion = emotion;
         });
       },
-      child: Opacity( // Dim button if loading
+      child: Opacity(
         opacity: _isLoading ? 0.6 : 1.0,
         child: Container(
-          width: 80,
-          padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 5),
+          width: buttonSize, // Make width responsive
+          // height: buttonSize * 1.2, // Optionally make height responsive, or let padding define it
+          padding: EdgeInsets.symmetric(vertical: screenHeight * 0.03, horizontal: screenWidth * 0.03), // Responsive padding
           decoration: BoxDecoration(
             color: isSelected ? darkTealButton.withOpacity(0.85) : Colors.black.withOpacity(0.25),
             borderRadius: BorderRadius.circular(12),
@@ -709,20 +733,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center, // Center content
             children: [
               Image.asset(
                 assetPath,
-                width: 40,
-                height: 40,
+                width: buttonSize * 0.5, // Responsive image size
+                height: buttonSize * 0.5, // Responsive image size
                 errorBuilder: (context, error, stackTrace) => Icon(
-                  Icons.sentiment_neutral, size: 40, color: isSelected ? Colors.white : goldText,
+                  Icons.sentiment_neutral, size: buttonSize * 0.5, color: isSelected ? Colors.white : goldText,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: screenHeight * 0.01), // Responsive spacing
               Text(
                 emotion,
                 style: GoogleFonts.poppins(
-                  fontSize: 14,
+                  fontSize: textFs, // Responsive text
                   fontWeight: FontWeight.w500,
                   color: isSelected ? Colors.white : goldText,
                 ),
