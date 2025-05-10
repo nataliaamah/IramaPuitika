@@ -122,7 +122,7 @@ class _ResultScreenState extends State<ResultScreen> {
   AppBar _buildAppBar() {
     return AppBar(
       title: Text(
-        "Pantun Recommendations",
+        "Results",
         style: GoogleFonts.poppins(
           fontSize: 20,
           fontWeight: FontWeight.w600,
