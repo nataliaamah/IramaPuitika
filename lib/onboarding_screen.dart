@@ -35,7 +35,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM'; // IMPORTANT: Secure your API key
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent';
-  final String flaskApiUrl = "https://pantun-api-service-360024071473.asia-southeast1.run.app/recommend"; //
+  final String flaskApiUrl = "https://context-based-pantun-rec-service-360024071473.asia-southeast1.run.app/recommend"; //
 
   // Specific error message string for scenery validation
   final String _invalidSceneryErrorMessage = "Error: Image is not a valid scenery. Please upload an image of grasslands, aquatic biomes, or forest biomes.";
@@ -53,7 +53,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   static const Color goldText = Color(0xFFE6C68A);
   static const Color darkTealButton = Color(0xFF004D40);
   static const Color lightGoldAccent = Color(0xFFF5EAD0);
-  static const Color cardBackgroundColor = Color(0x33000000);
 
   @override
   void initState() {
