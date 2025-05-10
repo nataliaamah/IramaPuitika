@@ -84,7 +84,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     ),
                     if (widget.result.length > 1)
                       Padding(
-                        padding: EdgeInsets.only(bottom: screenHeight * 0.02, top: screenHeight * 0.01),
+                        padding: EdgeInsets.only(bottom: screenHeight * 0.03, top: screenHeight * 0.02),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
@@ -159,6 +159,15 @@ class _ResultScreenState extends State<ResultScreen> {
         ? Colors.black.withOpacity(0.5)
         : Colors.black87;
 
+    // Process the pantun string to ensure newlines are rendered
+    String pantunText = pantunData['pantun'] as String? ?? 'Pantun not available';
+    // Replace common escaped newline sequences with actual newline characters
+    pantunText = pantunText.replaceAll('\\r\\n', '\n').replaceAll('\\n', '\n').replaceAll('\\r', '\n');
+    // Replace punctuation followed by space(s) with punctuation followed by a newline
+    // This handles cases like "line1, line2" or "line1; line2"
+    pantunText = pantunText.replaceAll(RegExp(r',\s+'), ',\n');
+    pantunText = pantunText.replaceAll(RegExp(r';\s+'), ';\n');
+
     return Opacity(
       opacity: isDimmed ? 0.75 : 1.0,
       child: Transform.scale(
@@ -190,13 +199,13 @@ class _ResultScreenState extends State<ResultScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 45.0), // Adjust as needed
               child: Center(
                 child: Text(
-                  pantunData['pantun'] ?? 'Pantun not available',
+                  pantunText, // Use the processed pantunText
                   textAlign: TextAlign.center,
                   style: GoogleFonts.tangerine(
                     fontSize: screenWidth * 0.07, // Slightly increased text size
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     color: pantunTextColor,
-                    height: 1.0,
+                    height: 1.2,
                   ),
                 ),
               ),
