@@ -41,7 +41,7 @@ class _ResultScreenState extends State<ResultScreen> {
       appBar: _buildAppBar(),
       body: Container(
         decoration: const BoxDecoration(gradient: maroonGradientBackground),
-        child: SafeArea(
+        child: SafeArea( // Content will be within the safe area
           child: widget.result.isEmpty
               ? _noResultsFound(screenWidth, screenHeight)
               : Column(
@@ -52,11 +52,12 @@ class _ResultScreenState extends State<ResultScreen> {
                         cardsCount: widget.result.length,
                         numberOfCardsDisplayed: widget.result.length < 3 ? widget.result.length : 3,
                         isLoop: true,
-                        scale: 0.9,
-                        backCardOffset: const Offset(0, 25),
+                        backCardOffset: const Offset(0, 10),
+                        // ADJUST THIS PADDING TO CONTROL CARD SIZE AND ASPECT RATIO:
                         padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.05,
-                            vertical: screenHeight * 0.03),
+                          horizontal: screenWidth * 0.001, // Example: try adjusting this
+                          vertical: screenHeight * 0.12  // Example: try adjusting this
+                        ),
                         onSwipe: (prevIndex, newSwipedIndex, direction) {
                           if (mounted) {
                             setState(() {
@@ -68,9 +69,7 @@ class _ResultScreenState extends State<ResultScreen> {
                         onUndo: (previousIndex, originalIndex, direction) {
                           if (mounted) {
                             setState(() {
-                              // When undoing, 'originalIndex' (the second parameter from the callback)
-                              // is the index of the card that is now at the front.
-                              currentIndex = originalIndex; // Corrected line
+                              currentIndex = originalIndex;
                             });
                           }
                           return true; // Allow the undo.
@@ -138,91 +137,67 @@ class _ResultScreenState extends State<ResultScreen> {
 
   Widget _pantunCard(BuildContext context, Map<String, dynamic> pantunData, {bool isDimmed = false}) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final cardColor = isDimmed ? lightGoldAccent.withOpacity(0.3) : lightGoldAccent;
-    final textColor = isDimmed ? darkTealButton.withOpacity(0.6) : darkTealButton;
-    final pantunTextColor = isDimmed ? const Color(0xFF4A0E1D).withOpacity(0.7) : const Color(0xFF4A0E1D); // Darker maroon for pantun text
+    final String theme = pantunData['theme'] as String? ?? 'default';
+
+    String backgroundImagePath;
+    switch (theme.toLowerCase()) {
+      case 'budi':
+        backgroundImagePath = 'assets/images/background_budi.png';
+        break;
+      case 'kias dan ibarat':
+      case 'kias_dan_ibarat':
+        backgroundImagePath = 'assets/images/background_kias_dan_ibarat.png';
+        break;
+      case 'percintaan':
+        backgroundImagePath = 'assets/images/background_percintaan.png';
+        break;
+      default:
+        backgroundImagePath = 'assets/images/default_paper_style_background.png';
+    }
+
+    final pantunTextColor = isDimmed
+        ? Colors.black.withOpacity(0.5)
+        : Colors.black87;
 
     return Opacity(
-      opacity: isDimmed ? 0.6 : 1.0,
+      opacity: isDimmed ? 0.75 : 1.0,
       child: Transform.scale(
         scale: isDimmed ? 0.92 : 1.0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6.0),
-          child: GestureDetector(
-            onTap: () {
-              if (!isDimmed) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PantunDetailScreen(pantunData: pantunData),
-                  ),
-                );
-              }
-            },
-            child: Card(
-              elevation: isDimmed ? 2 : 8,
-              shadowColor: Colors.black.withOpacity(0.2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+        // Removed Padding widget here or set its padding to EdgeInsets.zero
+        child: GestureDetector(
+          onTap: () {
+            if (!isDimmed) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PantunDetailScreen(pantunData: pantunData),
+                ),
+              );
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage(backgroundImagePath),
+                fit: BoxFit.fitHeight, // Or BoxFit.fitHeight
+                onError: (exception, stackTrace) {
+                  debugPrint('Error loading image $backgroundImagePath: $exception');
+                },
               ),
-              color: cardColor, // Use themed card color
-              child: Container(
-                padding: const EdgeInsets.all(18), // Adjusted padding
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center( // Center the pantun text
-                      child: Text(
-                        pantunData['pantun'] ?? 'No pantun available',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.merriweather(
-                          fontSize: screenWidth * 0.042,
-                          fontWeight: FontWeight.normal,
-                          color: pantunTextColor,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Divider(color: textColor.withOpacity(0.3)),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Icon(Icons.tag, size: screenWidth * 0.045, color: textColor),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "Keywords: ${_formatKeywords(pantunData['keywords'])}",
-                            style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.033,
-                              color: textColor,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.emoji_emotions_outlined, size: screenWidth * 0.045, color: textColor),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "Emotion: ${_formatKeywords(pantunData['emotion'])}",
-                            style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.033,
-                              color: textColor,
-                            ),
-                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+            ),
+            child: Padding(
+              // This padding is for the text *inside* the image card
+              padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 45.0), // Adjust as needed
+              child: Center(
+                child: Text(
+                  pantunData['pantun'] ?? 'Pantun not available',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.tangerine(
+                    fontSize: screenWidth * 0.07, // Slightly increased text size
+                    fontWeight: FontWeight.w700,
+                    color: pantunTextColor,
+                    height: 1.0,
+                  ),
                 ),
               ),
             ),
