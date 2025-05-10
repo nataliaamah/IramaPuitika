@@ -23,8 +23,14 @@ class ResultScreen extends StatefulWidget {
 }
 
 class _ResultScreenState extends State<ResultScreen> {
-  int currentIndex = 0;
+  int currentIndex = 0; // This will be updated by onUpdateIndex for the Text widget
   final CardSwiperController _swiperController = CardSwiperController();
+
+  @override
+  void dispose() {
+    _swiperController.dispose(); // Dispose the controller
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,20 +51,33 @@ class _ResultScreenState extends State<ResultScreen> {
                         controller: _swiperController,
                         cardsCount: widget.result.length,
                         numberOfCardsDisplayed: widget.result.length < 3 ? widget.result.length : 3,
-                        isLoop: false,
-                        scale: 0.9, // Slightly more pronounced scale for background cards
-                        backCardOffset: const Offset(0, 25), // Adjusted offset
+                        isLoop: true,
+                        scale: 0.9,
+                        backCardOffset: const Offset(0, 25),
                         padding: EdgeInsets.symmetric(
                             horizontal: screenWidth * 0.05,
                             vertical: screenHeight * 0.03),
-                        onSwipe: (prev, newIndex, direction) {
-                          setState(() {
-                            currentIndex = newIndex ?? 0;
-                          });
+                        onSwipe: (prevIndex, newSwipedIndex, direction) {
+                          if (mounted) {
+                            setState(() {
+                              currentIndex = newSwipedIndex ?? 0;
+                            });
+                          }
                           return true;
+                        },
+                        onUndo: (previousIndex, originalIndex, direction) {
+                          if (mounted) {
+                            setState(() {
+                              // When undoing, 'originalIndex' (the second parameter from the callback)
+                              // is the index of the card that is now at the front.
+                              currentIndex = originalIndex; // Corrected line
+                            });
+                          }
+                          return true; // Allow the undo.
                         },
                         cardBuilder: (context, index, hThreshold, vThreshold) {
                           final pantunData = widget.result[index];
+                          // Determine if the card is the front card based on the state's currentIndex
                           bool isEffectivelyFront = index == currentIndex;
                           return _pantunCard(context, pantunData, isDimmed: !isEffectivelyFront);
                         },
@@ -72,11 +91,12 @@ class _ResultScreenState extends State<ResultScreen> {
                           children: [
                             IconButton(
                               icon: Icon(Icons.arrow_back_ios, color: lightGoldAccent.withOpacity(0.8)),
-                              onPressed: currentIndex > 0
-                                  ? () => _swiperController.swipe(CardSwiperDirection.left) // Corrected
+                              onPressed: widget.result.isNotEmpty
+                                  ? () => _swiperController.undo()
                                   : null,
                             ),
                             Text(
+                              // This Text widget uses the _ResultScreenState.currentIndex
                               "${currentIndex + 1} / ${widget.result.length}",
                               style: GoogleFonts.poppins(
                                   fontSize: screenWidth * 0.04,
@@ -85,8 +105,8 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                             IconButton(
                               icon: Icon(Icons.arrow_forward_ios, color: lightGoldAccent.withOpacity(0.8)),
-                              onPressed: currentIndex < widget.result.length - 1
-                                  ? () => _swiperController.swipe(CardSwiperDirection.right) // Corrected
+                              onPressed: widget.result.isNotEmpty
+                                  ? () => _swiperController.swipe(CardSwiperDirection.right)
                                   : null,
                             ),
                           ],
