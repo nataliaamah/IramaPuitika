@@ -526,7 +526,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           SizedBox(height: screenHeight * 0.04),
           GestureDetector(
-            onTap: _isLoading ? null : () => _pickImage(fromCamera: false),
+            onTap: _isLoading ? null : () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: const Color(0xFFAB5D5D).withOpacity(0.9),
+                builder: (BuildContext context) {
+                  return SafeArea(
+                    child: Wrap(
+                      children: <Widget>[
+                        ListTile(
+                          leading: Icon(Icons.photo_library, color: lightGoldAccent),
+                          title: Text('Choose from Gallery', style: GoogleFonts.poppins(color: lightGoldAccent)),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            _pickImage(fromCamera: false);
+                          },
+                        ),
+                        ListTile(
+                          leading: Icon(Icons.camera_alt, color: lightGoldAccent),
+                          title: Text('Take a Photo', style: GoogleFonts.poppins(color: lightGoldAccent)),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            _pickImage(fromCamera: true);
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
             child: Container(
               width: screenWidth * 0.7, // Responsive width
               constraints: BoxConstraints(
@@ -554,7 +583,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         ),
                         SizedBox(height: screenHeight * 0.015),
                         Text(
-                          'Tap to Upload Scenery',
+                          'Tap to Upload Image', // Changed text
+                          textAlign: TextAlign.center,
                           style: GoogleFonts.poppins(
                             fontSize: subtitleFs * 0.9, // Slightly smaller subtitle
                             color: goldText,
@@ -564,7 +594,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
             ),
           ),
-          SizedBox(height: screenHeight * 0.03),
+          SizedBox(height: screenHeight * 0.03), // Adjusted spacing after removing the dedicated camera button
           if (showSceneryError)
             Container(
               margin: EdgeInsets.only(top: 0, bottom: screenHeight * 0.01),
