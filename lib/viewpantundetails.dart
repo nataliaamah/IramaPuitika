@@ -105,19 +105,24 @@ class PantunDetailScreen extends StatelessWidget {
                     if (keywordsData is List) {
                       keywordsList = keywordsData;
                     } else if (keywordsData is String && keywordsData.isNotEmpty) {
-                      // If it's a non-empty string, treat it as a single keyword.
-                      keywordsList = [keywordsData]; 
+                      keywordsList = [keywordsData];
                     }
                     
                     for (var keyword in keywordsList) {
-                      if (keyword.toString().isNotEmpty) { // Ensure keyword is not empty
+                      if (keyword.toString().isNotEmpty) {
                         chipWidgets.add(Chip(
-                          label: Text(keyword.toString(), style: GoogleFonts.poppins(color: Color(0xFF8A1D37), fontSize: screenWidth * 0.032, fontWeight: FontWeight.w500)),
-                          backgroundColor: goldText.withOpacity(0.85),
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02, vertical: screenHeight * 0.005),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16.0),
-                            side: BorderSide(color: goldText.withOpacity(0.5), width: 0.5),
+                          label: Text(
+                            keyword.toString(),
+                            style: GoogleFonts.poppins(
+                              color: PantunDetailScreen.goldText, // Use goldText for label
+                              fontSize: screenWidth * 0.032,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          backgroundColor: Colors.transparent, // Make background transparent
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.006),
+                          shape: StadiumBorder( // Use StadiumBorder or RoundedRectangleBorder for outline
+                            side: BorderSide(color: PantunDetailScreen.goldText.withOpacity(0.6), width: 1.0),
                           ),
                         ));
                       }
@@ -130,19 +135,24 @@ class PantunDetailScreen extends StatelessWidget {
                     if (emotionData is List) {
                       emotionList = emotionData;
                     } else if (emotionData is String && emotionData.isNotEmpty) {
-                      // If it's a non-empty string, treat it as a single emotion.
                       emotionList = [emotionData];
                     }
 
                     for (var emotion in emotionList) {
-                      if (emotion.toString().isNotEmpty) { // Ensure emotion is not empty
+                      if (emotion.toString().isNotEmpty) {
                         chipWidgets.add(Chip(
-                          label: Text(emotion.toString(), style: GoogleFonts.poppins(color: Color(0xFF8A1D37), fontSize: screenWidth * 0.032, fontWeight: FontWeight.w500)),
-                          backgroundColor: goldText.withOpacity(0.7), // Slightly different for distinction
-                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02, vertical: screenHeight * 0.005),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16.0),
-                            side: BorderSide(color: goldText.withOpacity(0.4), width: 0.5),
+                          label: Text(
+                            emotion.toString(),
+                            style: GoogleFonts.poppins(
+                              color: PantunDetailScreen.goldText, // Use goldText for label
+                              fontSize: screenWidth * 0.032,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          backgroundColor: Colors.transparent, // Make background transparent
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.006),
+                          shape: StadiumBorder( // Use StadiumBorder or RoundedRectangleBorder for outline
+                            side: BorderSide(color: PantunDetailScreen.goldText.withOpacity(0.5), width: 1.0), // Slightly different opacity for distinction
                           ),
                         ));
                       }
@@ -150,14 +160,27 @@ class PantunDetailScreen extends StatelessWidget {
                   }
 
                   if (chipWidgets.isNotEmpty) {
-                    return Wrap(
-                      spacing: 8.0, // Horizontal spacing between chips
-                      runSpacing: 4.0, // Vertical spacing between lines of chips
-                      alignment: WrapAlignment.center,
-                      children: chipWidgets,
+                    return Column( // Wrap label and chips in a Column
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Associated Tags:", // Label for the chips
+                          style: GoogleFonts.poppins(
+                            color: PantunDetailScreen.goldText.withOpacity(0.8),
+                            fontSize: screenWidth * 0.035,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: screenHeight * 0.015), // Spacing between label and chips
+                        Wrap(
+                          spacing: 8.0,
+                          runSpacing: 4.0,
+                          alignment: WrapAlignment.center,
+                          children: chipWidgets,
+                        ),
+                      ],
                     );
                   }
-                  // Return an empty widget if there are no keywords or emotions to display
                   return const SizedBox.shrink(); 
                 },
               ),
