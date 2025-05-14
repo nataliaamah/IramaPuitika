@@ -10,6 +10,8 @@ class PantunDetailScreen extends StatelessWidget {
   // Define color constants as static const members of the class
   static const Color goldText = Color(0xFFE6C68A);
   static const Color darkTealButton = Color(0xFF004D40);
+
+  // Consistent gradient with other screens
   static const LinearGradient maroonGradientBackground = LinearGradient(
     colors: [Color(0xFF8A1D37), Color(0xFFAB5D5D)],
     begin: Alignment.topCenter,
@@ -20,209 +22,175 @@ class PantunDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final EdgeInsets systemPadding = MediaQuery.of(context).padding; // Get system padding (status bar)
+    final EdgeInsets systemPadding = MediaQuery.of(context).padding;
+
+    // Process the pantun string for newlines
+    String pantunText = pantunData['pantun'] as String? ?? 'No pantun available';
+    pantunText = pantunText.replaceAll('\\r\\n', '\n').replaceAll('\\n', '\n').replaceAll('\\r', '\n');
+    pantunText = pantunText.replaceAll(RegExp(r',\s+'), ',\n');
+    pantunText = pantunText.replaceAll(RegExp(r';\s+'), ';\n');
 
     return Scaffold(
-      extendBodyBehindAppBar: true, // Make body extend behind AppBar
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Make AppBar transparent
-        elevation: 0, 
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: goldText), // Use gold color for back arrow
+        iconTheme: const IconThemeData(color: goldText),
         title: Text(
-          "Pantun Details",
+          "Pantun",
           style: GoogleFonts.poppins(
-            fontSize: screenWidth * 0.052,
-            fontWeight: FontWeight.w600,
-            color: goldText,
+            fontSize: screenWidth * 0.045,
+            fontWeight: FontWeight.w500,
+            color: goldText.withOpacity(0.8),
           ),
         ),
       ),
-      body: Container( // This Container now only handles the gradient and fills the screen
+      body: Container( // Wrap SingleChildScrollView with a Container for the gradient
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(gradient: maroonGradientBackground),
+        decoration: const BoxDecoration( // Use the consistent gradient
+          gradient: maroonGradientBackground,
+        ),
         child: SingleChildScrollView(
-          // Apply padding here to position the content correctly below the transparent AppBar
           padding: EdgeInsets.only(
-            top: systemPadding.top + kToolbarHeight + (screenHeight * 0.02), // Status bar + AppBar height + extra space
-            left: screenWidth * 0.05,
-            right: screenWidth * 0.05,
+            top: systemPadding.top + kToolbarHeight + (screenHeight * 0.03),
+            left: screenWidth * 0.06,
+            right: screenWidth * 0.06,
             bottom: screenHeight * 0.03,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Pantun Text in a Minimalist Card
-              Container(
-                width: screenWidth * 0.85,
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.025),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: goldText.withOpacity(0.5), width: 1.5),
-                ),
-                child: Column(
-                  children: [
-                    // Custom Illustration (Placeholder)
-                    Image.asset(
-                      'assets/images/pantun.png', // Add your custom illustration
-                      height: screenHeight * 0.18,
-                      width: screenWidth * 0.4,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) =>
-                          Icon(Icons.image_not_supported, size: screenWidth * 0.2, color: goldText),
-                    ),
-
-                    // Pantun Text with Elegant Typography
-                    Text(
-                      pantunData['pantun'] ?? 'No pantun available',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.alice(
-                        fontSize: screenWidth * 0.048, // Adjusted from 0.05
-                        fontWeight: FontWeight.w500,
-                        color: goldText,
-                        fontStyle: FontStyle.italic,
-                        height: 1.35, // Slightly increased line height for Alice font
-                      ),
-                    ),
-                    SizedBox(height: screenHeight * 0.015),
-                    // Decorative Divider
-                    Divider(
-                      color: goldText.withOpacity(0.4),
-                      thickness: 1.2,
-                      height: screenHeight * 0.02,
-                    ),
-                    // Small Quote or Tagline
-                    Text(
-                      "~ Traditional Malay Poetry ~",
-                      style: GoogleFonts.poppins(
-                        fontSize: screenWidth * 0.033, // Adjusted from 0.035
-                        fontStyle: FontStyle.italic,
-                        color: goldText.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
+              Image.asset(
+                'assets/images/pantun.png',
+                height: screenHeight * 0.2,
+                width: screenWidth * 0.45,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) =>
+                    Icon(Icons.broken_image, size: screenWidth * 0.2, color: goldText.withOpacity(0.7)),
+              ),
+              SizedBox(height: screenHeight * 0.02),
+              Text(
+                pantunText, // Use the processed pantunText
+                textAlign: TextAlign.center,
+                style: GoogleFonts.alice(
+                  fontSize: screenWidth * 0.05,
+                  fontWeight: FontWeight.w500,
+                  color: goldText,
+                  height: 1.4,
                 ),
               ),
-              SizedBox(height: screenHeight * 0.04),
-
-              // Keywords Section
-              _buildDetailSection(
-                screenWidth: screenWidth,
-                screenHeight: screenHeight,
-                icon: Icons.tag,
-                title: "Keywords",
-                content: _formatKeywords(pantunData['keywords']),
+              SizedBox(height: screenHeight * 0.01),
+              Text(
+                "~ Traditional Malay Poetry ~",
+                style: GoogleFonts.poppins(
+                  fontSize: screenWidth * 0.03,
+                  fontStyle: FontStyle.italic,
+                  color: goldText.withOpacity(0.7),
+                ),
               ),
+              SizedBox(height: screenHeight * 0.035),
 
-              SizedBox(height: screenHeight * 0.025),
+              // Display Keywords and Emotion as Chips
+              Builder(
+                builder: (context) {
+                  List<Widget> chipWidgets = [];
+                  final keywordsData = pantunData['keywords'];
+                  final emotionData = pantunData['emotion'];
 
-              // Emotion Section
-              _buildDetailSection(
-                screenWidth: screenWidth,
-                screenHeight: screenHeight,
-                icon: Icons.emoji_emotions,
-                title: "Emotion",
-                content: _formatKeywords(pantunData['emotion']),
+                  // Process keywords
+                  if (keywordsData != null) {
+                    List<dynamic> keywordsList = [];
+                    if (keywordsData is List) {
+                      keywordsList = keywordsData;
+                    } else if (keywordsData is String && keywordsData.isNotEmpty) {
+                      // If it's a non-empty string, treat it as a single keyword.
+                      keywordsList = [keywordsData]; 
+                    }
+                    
+                    for (var keyword in keywordsList) {
+                      if (keyword.toString().isNotEmpty) { // Ensure keyword is not empty
+                        chipWidgets.add(Chip(
+                          label: Text(keyword.toString(), style: GoogleFonts.poppins(color: Color(0xFF8A1D37), fontSize: screenWidth * 0.032, fontWeight: FontWeight.w500)),
+                          backgroundColor: goldText.withOpacity(0.85),
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02, vertical: screenHeight * 0.005),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16.0),
+                            side: BorderSide(color: goldText.withOpacity(0.5), width: 0.5),
+                          ),
+                        ));
+                      }
+                    }
+                  }
+
+                  // Process emotions
+                  if (emotionData != null) {
+                    List<dynamic> emotionList = [];
+                    if (emotionData is List) {
+                      emotionList = emotionData;
+                    } else if (emotionData is String && emotionData.isNotEmpty) {
+                      // If it's a non-empty string, treat it as a single emotion.
+                      emotionList = [emotionData];
+                    }
+
+                    for (var emotion in emotionList) {
+                      if (emotion.toString().isNotEmpty) { // Ensure emotion is not empty
+                        chipWidgets.add(Chip(
+                          label: Text(emotion.toString(), style: GoogleFonts.poppins(color: Color(0xFF8A1D37), fontSize: screenWidth * 0.032, fontWeight: FontWeight.w500)),
+                          backgroundColor: goldText.withOpacity(0.7), // Slightly different for distinction
+                          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.02, vertical: screenHeight * 0.005),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16.0),
+                            side: BorderSide(color: goldText.withOpacity(0.4), width: 0.5),
+                          ),
+                        ));
+                      }
+                    }
+                  }
+
+                  if (chipWidgets.isNotEmpty) {
+                    return Wrap(
+                      spacing: 8.0, // Horizontal spacing between chips
+                      runSpacing: 4.0, // Vertical spacing between lines of chips
+                      alignment: WrapAlignment.center,
+                      children: chipWidgets,
+                    );
+                  }
+                  // Return an empty widget if there are no keywords or emotions to display
+                  return const SizedBox.shrink(); 
+                },
               ),
 
               SizedBox(height: screenHeight * 0.05),
 
-              // Share Button (Elevated Button)
               ElevatedButton.icon(
                 onPressed: () async {
-                  // Get the pantun text
                   final pantunText = pantunData['pantun'] ?? 'No pantun available';
-
-                  // Share the pantun text
                   Share.share(pantunText);
                 },
-                icon: const Icon(Icons.share, color: Colors.white),
+                icon: const Icon(Icons.share, color: Colors.white, size: 24),
                 label: Text(
                   "Share Pantun",
                   style: GoogleFonts.poppins(
-                    fontSize: screenWidth * 0.045,
+                    fontSize: screenWidth * 0.042,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: darkTealButton,
-                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1, vertical: screenHeight * 0.016),
+                  padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08, vertical: screenHeight * 0.018),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
               ),
+              SizedBox(height: screenHeight * 0.02), // Ensure some padding at the very bottom
             ],
           ),
         ),
       ),
     );
-  }
-
-  /// 📌 Build a Detail Section with Icon and Text
-  Widget _buildDetailSection({
-    required double screenWidth,
-    required double screenHeight,
-    required IconData icon,
-    required String title,
-    required String content,
-  }) {
-    return Container(
-      width: screenWidth * 0.85,
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenHeight * 0.018), // Adjusted vertical padding
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: PantunDetailScreen.goldText.withOpacity(0.5), width: 1.5), // Access via ClassName.goldText
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center, // Align icon and text centrally if content is short
-        children: [
-          Icon(
-            icon,
-            size: screenWidth * 0.065, // Adjusted icon size
-            color: PantunDetailScreen.goldText, // Access via ClassName.goldText
-          ),
-          SizedBox(width: screenWidth * 0.035), // Adjusted spacing
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    fontSize: screenWidth * 0.042, // Adjusted from 0.045
-                    fontWeight: FontWeight.w600,
-                    color: PantunDetailScreen.goldText, // Access via ClassName.goldText
-                  ),
-                ),
-                SizedBox(height: screenHeight * 0.006), // Adjusted spacing
-                Text(
-                  content,
-                  style: GoogleFonts.poppins(
-                    fontSize: screenWidth * 0.037, // Adjusted from 0.04
-                    color: PantunDetailScreen.goldText.withOpacity(0.9), // Access via ClassName.goldText
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// ✅ Function to safely format keywords
-  String _formatKeywords(dynamic keywords) {
-    if (keywords is List) {
-      return keywords.join(', ');
-    } else if (keywords is String) {
-      return keywords;
-    }
-    return 'Unknown';
   }
 }

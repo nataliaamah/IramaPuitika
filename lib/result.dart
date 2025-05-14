@@ -84,7 +84,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     ),
                     if (widget.result.length > 1)
                       Padding(
-                        padding: EdgeInsets.only(bottom: screenHeight * 0.03, top: screenHeight * 0.02),
+                        padding: EdgeInsets.only(bottom: screenHeight * 0.02, top: screenHeight * 0.01),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
@@ -202,7 +202,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   pantunText, // Use the processed pantunText
                   textAlign: TextAlign.center,
                   style: GoogleFonts.tangerine(
-                    fontSize: screenWidth * 0.07, // Slightly increased text size
+                    fontSize: screenWidth * 0.08, // Slightly increased text size
                     fontWeight: FontWeight.w800,
                     color: pantunTextColor,
                     height: 1.2,
