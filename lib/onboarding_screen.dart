@@ -184,7 +184,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Future<void> _uploadAndAnalyzeImage() async {
+    Future<void> _uploadAndAnalyzeImage() async {
     // Ensure _isLoading is true at the start of this async operation
     if (!mounted || _selectedImage == null) {
       if (_selectedImage == null) {
@@ -196,16 +196,70 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       return;
     }
 
+    // Ensure emotion is selected before analyzing the image
+    // This check is important because the prompt now depends on the selected emotion
+    if (_selectedEmotion == null) {
+       setState(() {
+        _keywords = 'Please select an emotion before uploading an image.';
+       });
+       _setLoading(false);
+       if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(_keywords, style: GoogleFonts.poppins(color: Colors.white)),
+                backgroundColor: Colors.orangeAccent),
+          );
+       }
+       return;
+    }
+
+
     try {
       final imageBytes = await _selectedImage!.readAsBytes();
       final base64Image = base64Encode(imageBytes);
+
+      // Define the prompt string, injecting the selected emotion
+      // The prompt is modified to include the logic for filtering keywords based on emotion
+      final String promptText = """
+You are an AI image analysis assistant for a Pantun Recommender System. Your task is to analyze an uploaded image and extract 5-7 keywords. These keywords must describe both its visual elements and emotional tone, drawing exclusively from the provided emotional lexicons, but *constrained by a user-selected emotion*.
+
+**Primary Task & Image Validation:**
+1.  **Scenery Check:** Evaluate if the uploaded image is predominantly a scenery or landscape image.
+    *   **Acceptable:** Images focused on natural environments such as grasslands, aquatic biomes (oceans, rivers, lakes), and forest biomes. The presence of people, animals, or objects is acceptable if they are part of the broader scene.
+    *   **Not Acceptable:** Images focused on tundra, desert biomes, selfies, isolated portraits, close-ups of single objects, abstract patterns, or screenshots.
+2.  If the image is NOT a valid scenery image, respond ONLY with: "$_invalidSceneryErrorMessage"
+
+**Keyword Extraction (Only for Valid Scenery Images):**
+1.  Analyze the visual elements and the overall emotional tone evoked by the image.
+2.  Based on the user's selected emotion ('$_selectedEmotion'), identify which lexicon(s) are allowed for keyword selection:
+    *   If the selected emotion is 'Happy', use ONLY keywords from the 'Joy' lexicon.
+    *   If the selected emotion is 'Sad' or 'Angry', use keywords from the 'Sadness' and 'Anger' lexicons.
+3.  Select exactly 5-7 keywords from the *allowed lexicon(s)* (identified in step 2) that best describe the image's visual elements and the tone you perceived in step 1. Choose the closest emotional association available in the allowed lexicon(s) if a direct match isn't present.
+4.  Ensure the selected keywords strictly adhere to the words listed in the relevant lexicon(s).
+
+**Lexicons (Strictly Adhere to These):**
+-   **Joy:** Happy, Content, Joy, Grateful, Blessed, Smile, Fun, Excited, Laughter, Proud
+-   **Sadness:** Lonely, Broken, Disappointed, Depressed, Hurt, Frustrated, Crying, Miserable, Hopeless, Regret
+-   **Anger:** Angry, Annoying, Hate, Frustrated, Furious, Outrage, Offensive, Cursing, Idiotic, Condemn
+
+**Output Format:**
+-   Provide the final list of keywords as a single, comma-separated string.
+-   Example for a sunny meadow with user emotion 'Happy': `Happy, Content, Joy, Smile, Grateful`
+-   Example for a stormy sea with user emotion 'Sad' or 'Angry': `Angry, Furious, Miserable, Hopeless, Frustrated`
+
+**Final Check:**
+-   Is the image confirmed to be a valid scenery image (grasslands, aquatic biomes, or forest biomes)?
+-   Are ALL selected words ONLY from the provided lexicons *as constrained by the user's selected emotion*?
+-   Is the total number of keywords between 5 and 7?
+-   Is the output a comma-separated list?
+""";
 
       final requestBody = {
         "contents": [
           {
             "parts": [
               {
-                "text": "You are an AI image analysis assistant for a Pantun Recommender System. Your task is to analyze an uploaded image and extract 5-7 keywords. These keywords must describe both its visual elements and emotional tone, drawing exclusively from the provided emotional lexicons.\n\n**Primary Task & Image Validation:**\n1. **Scenery Check:** Evaluate if the uploaded image is predominantly a scenery or landscape image.\n   - **Acceptable:** Images focused on natural environments such as grasslands, aquatic biomes (oceans, rivers, lakes), and forest biomes. The presence of people, animals, or objects is acceptable if they are part of the broader scene.\n   - **Not Acceptable:** Images focused on tundra, desert biomes, selfies, isolated portraits, close-ups of single objects, abstract patterns, or screenshots.\n2. If the image is NOT a valid scenery image, respond ONLY with: \"$_invalidSceneryErrorMessage\"\n\n**Keyword Extraction (Only for Valid Scenery Images):**\n1. Extract exactly 5-7 keywords.\n2. Use ONLY words from the provided emotional lexicons (Joy, Sadness, Anger).\n3. Interpret visual elements and emotional tone using the lexicons. For example:\n   - A dark, stormy sky → 'Angry', 'Furious', 'Miserable'.\n   - A sunny field → 'Happy', 'Joy', 'Content'.\n4. Select the closest emotional association if no direct match exists.\n5. Ensure the keywords reflect the dominant visual characteristics and emotional tone.\n\n**Lexicons (Strictly Adhere to These):**\n- **Joy:** Happy, Content, Joy, Grateful, Blessed, Smile, Fun, Excited, Laughter, Proud\n- **Sadness:** Lonely, Broken, Disappointed, Depressed, Hurt, Frustrated, Crying, Miserable, Hopeless, Regret\n- **Anger:** Angry, Annoying, Hate, Frustrated, Furious, Outrage, Offensive, Cursing, Idiotic, Condemn\n\n**Output Format:**\n- Provide the final list of keywords as a single, comma-separated string.\n- Example for a stormy sea: `Angry, Furious, Miserable, Hopeless, Frustrated`\n- Example for a sunny meadow: `Happy, Content, Joy, Smile, Grateful`\n\n**Final Check:**\n- Is the image confirmed to be a valid scenery image (grasslands, aquatic biomes, or forest biomes)?\n- Are ALL selected words ONLY from the provided lexicons?\n- Is the total number of keywords between 5 and 7?\n- Is the output a comma-separated list?"
+                "text": promptText // Use the defined promptText variable
               },
               {
                 "inlineData": {
@@ -247,12 +301,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             _isScenery = false;
           });
         } else {
+          // **Important:** Filter extracted words based on the selected emotion's allowed lexicons
           List<String> extractedWords = parts
               .where((part) => part['text'] != null)
               .map((part) => part['text'].toString().toLowerCase().trim())
               .expand((text) => text.split(','))
               .map((word) => word.trim())
-              .where((word) => allEmotionKeywords.contains(word))
+              // **Added Filtering Logic:** Check if the word is in the allowed lexicon(s) for the selected emotion
+              .where((word) {
+                 if (_selectedEmotion == 'Happy') {
+                    return joyKeywords.contains(word);
+                 } else if (_selectedEmotion == 'Sad' || _selectedEmotion == 'Angry') {
+                    return sadnessKeywords.contains(word) || angerKeywords.contains(word);
+                 }
+                 return false; // Should not happen if _selectedEmotion is checked
+              })
               .toList()
               .take(7)
               .toList();
@@ -260,9 +323,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           setState(() {
             _keywords = extractedWords.isNotEmpty
                 ? extractedWords.join(", ")
-                : "Could not extract specific keywords. Feel free to choose an emotion!";
-            _isScenery = extractedWords.isNotEmpty; // Be more precise: scenery if keywords found
+                : "Could not extract specific keywords for the selected emotion. Feel free to choose an emotion!";
+            _isScenery = extractedWords.isNotEmpty || (aiResponseText != _invalidSceneryErrorMessage && aiResponseText.isNotEmpty); // Check if scenery validation passed or if keywords were extracted
+             // If no keywords were extracted but the response wasn't the scenery error, it might still be scenery.
+             // This logic is a bit tricky; you might need to refine it based on Gemini's exact responses.
+             // A simpler approach might be to assume it's scenery if the response isn't the specific error message.
+             _isScenery = (aiResponseText != _invalidSceneryErrorMessage);
           });
+           // If keywords were extracted, ensure _isScenery is true
+           if (extractedWords.isNotEmpty) {
+             _isScenery = true;
+           }
         }
       } else {
         setState(() {
@@ -404,10 +475,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final double smallTextFontSize = screenWidth * 0.032;
 
     // Determine if swiping from step 1 to step 2 should be allowed
+    bool canProceedFromStep0 = _selectedEmotion != null && !_isLoading;
     bool canProceedFromStep1 = _selectedImage != null && !_isLoading && _isScenery;
     ScrollPhysics pageViewPhysics = const ClampingScrollPhysics(); // Default physics
 
-    if (_currentStep == 0 && !canProceedFromStep1) {
+    if (_currentStep == 0 && !canProceedFromStep0) {
       pageViewPhysics = const NeverScrollableScrollPhysics();
     } else if (_currentStep == 1 && _isLoading) { // Also prevent swiping back from step 2 if loading
       pageViewPhysics = const NeverScrollableScrollPhysics();
@@ -438,7 +510,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         Padding(
                           padding: EdgeInsets.only(top: screenHeight * 0.008, bottom: screenHeight * 0.005),
                           child: Text(
-                            // Restored full text for clarity
                             _currentStep == 0 ? "Step 1 of 2" : "Step 2 of 2",
                             style: GoogleFonts.poppins(
                                 color: lightGoldAccent.withOpacity(0.9),
@@ -456,13 +527,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     onPageChanged: (index) {
                       setState(() {
                         _currentStep = index;
-                        // Recalculate physics when page changes, though primary control is on build
                       });
                     },
-                    physics: pageViewPhysics, // Apply dynamic physics here
+                    physics: pageViewPhysics,
                     children: [
-                      _imageInputScreen(screenWidth, screenHeight, titleFontSize, subtitleFontSize, bodyFontSize, buttonTextFontSize, smallTextFontSize),
                       _emotionSelectionScreen(screenWidth, screenHeight, titleFontSize, subtitleFontSize, buttonTextFontSize, smallTextFontSize),
+                      _imageInputScreen(screenWidth, screenHeight, titleFontSize, subtitleFontSize, bodyFontSize, buttonTextFontSize, smallTextFontSize),
                     ],
                   ),
                 ),
@@ -484,7 +554,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         textAlign: TextAlign.center,
                         style: GoogleFonts.poppins(
                             color: goldText,
-                            fontSize: subtitleFontSize * 1.05, // Slightly larger than subtitle
+                            fontSize: subtitleFontSize * 1.05,
                             fontWeight: FontWeight.w500),
                       ),
                     ],
@@ -497,6 +567,87 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  // SWAPPED: Emotion selection is now the first step
+  Widget _emotionSelectionScreen(double screenWidth, double screenHeight, double titleFs, double subtitleFs, double buttonFs, double smallFs) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.02),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(height: screenHeight * 0.08),
+          Text(
+            'Step 1: Choose Emotion',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: titleFs,
+              fontWeight: FontWeight.w600,
+              color: goldText,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.015),
+          Text(
+            'How are you feeling right now?',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: subtitleFs,
+              color: lightGoldAccent,
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.07),
+          Wrap(
+            spacing: screenWidth * 0.04,
+            runSpacing: screenHeight * 0.02,
+            alignment: WrapAlignment.center,
+            children: [
+              _emotionButton('Happy', 'assets/images/happy.png', screenWidth, screenHeight, subtitleFs * 0.85),
+              _emotionButton('Angry', 'assets/images/angry.png', screenWidth, screenHeight, subtitleFs * 0.85),
+              _emotionButton('Sad', 'assets/images/sad.png', screenWidth, screenHeight, subtitleFs * 0.85),
+            ],
+          ),
+          SizedBox(height: screenHeight * 0.07),
+          ElevatedButton(
+            onPressed: _selectedEmotion != null && !_isLoading
+                ? () => _pageController.nextPage(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                    )
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: darkTealButton,
+              foregroundColor: goldText,
+              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.12, vertical: screenHeight * 0.018),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              textStyle: GoogleFonts.poppins(fontSize: buttonFs, fontWeight: FontWeight.w600),
+            ),
+            child: const Text('Next'),
+          ),
+          SizedBox(height: screenHeight * 0.025),
+          TextButton(
+            onPressed: _isLoading ? null : () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            },
+            child: Text(
+              'Back to Home',
+              style: GoogleFonts.poppins(
+                fontSize: subtitleFs * 0.9,
+                color: _isLoading ? goldText.withOpacity(0.5) : goldText,
+                decoration: TextDecoration.underline,
+                decorationColor: goldText.withOpacity(0.8),
+                decorationThickness: 1.5,
+              ),
+            ),
+          ),
+          SizedBox(height: screenHeight * 0.02),
+        ],
+      ),
+    );
+  }
+
+  // SWAPPED: Image input is now the second step, and "Generate Pantun" is here
   Widget _imageInputScreen(double screenWidth, double screenHeight, double titleFs, double subtitleFs, double bodyFs, double buttonFs, double smallFs) {
     bool showSceneryError = !_isScenery && _keywords == _invalidSceneryErrorMessage && _selectedImage != null;
 
@@ -505,9 +656,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(height: screenHeight * 0.05), // Adjusted
+          SizedBox(height: screenHeight * 0.05),
           Text(
-            'Step 1: Upload Scenery',
+            'Step 2: Upload Scenery',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: titleFs,
@@ -557,11 +708,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               );
             },
             child: Container(
-              width: screenWidth * 0.7, // Responsive width
+              width: screenWidth * 0.7,
               constraints: BoxConstraints(
-                maxWidth: screenWidth * 0.7, // Max width based on screen
-                minHeight: screenHeight * 0.22, // Min height based on screen
-                maxHeight: screenHeight * 0.25, // Max height based on screen
+                maxWidth: screenWidth * 0.7,
+                minHeight: screenHeight * 0.22,
+                maxHeight: screenHeight * 0.25,
               ),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.25),
@@ -578,15 +729,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       children: [
                         Icon(
                           Icons.landscape_outlined,
-                          size: screenWidth * 0.12, // Responsive icon size
+                          size: screenWidth * 0.12,
                           color: goldText,
                         ),
                         SizedBox(height: screenHeight * 0.015),
                         Text(
-                          'Tap to Upload Image', // Changed text
+                          'Tap to Upload Image',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.poppins(
-                            fontSize: subtitleFs * 0.9, // Slightly smaller subtitle
+                            fontSize: subtitleFs * 0.9,
                             color: goldText,
                           ),
                         ),
@@ -594,7 +745,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
             ),
           ),
-          SizedBox(height: screenHeight * 0.03), // Adjusted spacing after removing the dedicated camera button
+          SizedBox(height: screenHeight * 0.03),
           if (showSceneryError)
             Container(
               margin: EdgeInsets.only(top: 0, bottom: screenHeight * 0.01),
@@ -622,85 +773,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           SizedBox(height: screenHeight * 0.02),
           ElevatedButton(
             onPressed: _selectedImage != null && !_isLoading && _isScenery
-                ? () => _pageController.nextPage(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                    )
+                ? _fetchPantunRecommendations
                 : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: darkTealButton,
-              foregroundColor: goldText,
-              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.12, vertical: screenHeight * 0.018),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-              textStyle: GoogleFonts.poppins(fontSize: buttonFs, fontWeight: FontWeight.w600),
-            ),
-            child: const Text('Next Step'),
-          ),
-          SizedBox(height: screenHeight * 0.02),
-          TextButton(
-            onPressed: _isLoading ? null : () {
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            },
-            child: Text(
-              'Back to Home',
-              style: GoogleFonts.poppins(
-                fontSize: subtitleFs * 0.9,
-                color: _isLoading ? goldText.withOpacity(0.5) : goldText,
-                decoration: TextDecoration.underline,
-                decorationColor: goldText.withOpacity(0.8),
-                decorationThickness: 1.5,
-              ),
-            ),
-          ),
-          SizedBox(height: screenHeight * 0.02),
-        ],
-      ),
-    );
-  }
-
-  Widget _emotionSelectionScreen(double screenWidth, double screenHeight, double titleFs, double subtitleFs, double buttonFs, double smallFs) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.02),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(height: screenHeight * 0.08),
-          Text(
-            'Step 2: Choose Emotion',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: titleFs,
-              fontWeight: FontWeight.w600,
-              color: goldText,
-            ),
-          ),
-          SizedBox(height: screenHeight * 0.015),
-          Text(
-            'How are you feeling right now?',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: subtitleFs,
-              color: lightGoldAccent,
-            ),
-          ),
-          SizedBox(height: screenHeight * 0.07),
-          Wrap(
-            spacing: screenWidth * 0.04, // Responsive spacing
-            runSpacing: screenHeight * 0.02, // Responsive runSpacing
-            alignment: WrapAlignment.center,
-            children: [
-              _emotionButton('Happy', 'assets/images/happy.png', screenWidth, screenHeight, subtitleFs * 0.85),
-              _emotionButton('Angry', 'assets/images/angry.png', screenWidth, screenHeight, subtitleFs * 0.85),
-              _emotionButton('Sad', 'assets/images/sad.png', screenWidth, screenHeight, subtitleFs * 0.85),
-            ],
-          ),
-          SizedBox(height: screenHeight * 0.07),
-          ElevatedButton(
-            onPressed: _selectedEmotion != null && !_isLoading ? _fetchPantunRecommendations : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: darkTealButton,
               foregroundColor: goldText,
@@ -712,7 +786,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: const Text('Generate Pantun'),
           ),
-          SizedBox(height: screenHeight * 0.025),
+          SizedBox(height: screenHeight * 0.02),
           TextButton(
             onPressed: _isLoading ? null : () => _pageController.previousPage(
               duration: const Duration(milliseconds: 400),
@@ -798,7 +872,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ],
           ),
         ),
-      ),
+      )
     );
   }
 }
