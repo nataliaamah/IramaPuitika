@@ -5,7 +5,7 @@ import 'package:share_plus/share_plus.dart';
 class PantunDetailScreen extends StatelessWidget {
   final Map<String, dynamic> pantunData;
 
-  const PantunDetailScreen({Key? key, required this.pantunData}) : super(key: key);
+  PantunDetailScreen({Key? key, required this.pantunData}) : super(key: key);
 
   // Define color constants as static const members of the class
   static const Color goldText = Color(0xFFE6C68A);
@@ -24,7 +24,6 @@ class PantunDetailScreen extends StatelessWidget {
     final screenHeight = MediaQuery.of(context).size.height;
     final EdgeInsets systemPadding = MediaQuery.of(context).padding;
 
-    // Process the pantun string for newlines
     String pantunText = pantunData['pantun'] as String? ?? 'No pantun available';
     pantunText = pantunText.replaceAll('\\r\\n', '\n').replaceAll('\\n', '\n').replaceAll('\\r', '\n');
     pantunText = pantunText.replaceAll(RegExp(r',\s+'), ',\n');
@@ -46,10 +45,10 @@ class PantunDetailScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Container( // Wrap SingleChildScrollView with a Container for the gradient
+      body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration( // Use the consistent gradient
+        decoration: const BoxDecoration(
           gradient: maroonGradientBackground,
         ),
         child: SingleChildScrollView(
@@ -72,7 +71,7 @@ class PantunDetailScreen extends StatelessWidget {
               ),
               SizedBox(height: screenHeight * 0.02),
               Text(
-                pantunText, // Use the processed pantunText
+                pantunText,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.alice(
                   fontSize: screenWidth * 0.05,
@@ -91,15 +90,12 @@ class PantunDetailScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: screenHeight * 0.035),
-
-              // Display Keywords and Emotion as Chips
               Builder(
                 builder: (context) {
                   List<Widget> chipWidgets = [];
                   final keywordsData = pantunData['keywords'];
                   final emotionData = pantunData['emotion'];
 
-                  // Process keywords
                   if (keywordsData != null) {
                     List<dynamic> keywordsList = [];
                     if (keywordsData is List) {
@@ -114,14 +110,14 @@ class PantunDetailScreen extends StatelessWidget {
                           label: Text(
                             keyword.toString(),
                             style: GoogleFonts.poppins(
-                              color: PantunDetailScreen.goldText, // Use goldText for label
+                              color: PantunDetailScreen.goldText,
                               fontSize: screenWidth * 0.032,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          backgroundColor: Colors.transparent, // Make background transparent
+                          backgroundColor: Colors.transparent,
                           padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.006),
-                          shape: StadiumBorder( // Use StadiumBorder or RoundedRectangleBorder for outline
+                          shape: StadiumBorder(
                             side: BorderSide(color: PantunDetailScreen.goldText.withOpacity(0.6), width: 1.0),
                           ),
                         ));
@@ -129,7 +125,6 @@ class PantunDetailScreen extends StatelessWidget {
                     }
                   }
 
-                  // Process emotions
                   if (emotionData != null) {
                     List<dynamic> emotionList = [];
                     if (emotionData is List) {
@@ -144,15 +139,15 @@ class PantunDetailScreen extends StatelessWidget {
                           label: Text(
                             emotion.toString(),
                             style: GoogleFonts.poppins(
-                              color: PantunDetailScreen.goldText, // Use goldText for label
+                              color: PantunDetailScreen.goldText,
                               fontSize: screenWidth * 0.032,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          backgroundColor: Colors.transparent, // Make background transparent
+                          backgroundColor: Colors.transparent,
                           padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.025, vertical: screenHeight * 0.006),
-                          shape: StadiumBorder( // Use StadiumBorder or RoundedRectangleBorder for outline
-                            side: BorderSide(color: PantunDetailScreen.goldText.withOpacity(0.5), width: 1.0), // Slightly different opacity for distinction
+                          shape: StadiumBorder(
+                            side: BorderSide(color: PantunDetailScreen.goldText.withOpacity(0.5), width: 1.0),
                           ),
                         ));
                       }
@@ -160,18 +155,18 @@ class PantunDetailScreen extends StatelessWidget {
                   }
 
                   if (chipWidgets.isNotEmpty) {
-                    return Column( // Wrap label and chips in a Column
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          "Associated Tags:", // Label for the chips
+                          "Associated Tags:",
                           style: GoogleFonts.poppins(
                             color: PantunDetailScreen.goldText.withOpacity(0.8),
                             fontSize: screenWidth * 0.035,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        SizedBox(height: screenHeight * 0.015), // Spacing between label and chips
+                        SizedBox(height: screenHeight * 0.015),
                         Wrap(
                           spacing: 8.0,
                           runSpacing: 4.0,
@@ -184,9 +179,7 @@ class PantunDetailScreen extends StatelessWidget {
                   return const SizedBox.shrink(); 
                 },
               ),
-
               SizedBox(height: screenHeight * 0.05),
-
               ElevatedButton.icon(
                 onPressed: () async {
                   final pantunText = pantunData['pantun'] ?? 'No pantun available';
@@ -209,7 +202,7 @@ class PantunDetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: screenHeight * 0.02), // Ensure some padding at the very bottom
+              SizedBox(height: screenHeight * 0.02),
             ],
           ),
         ),

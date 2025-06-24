@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For HapticFeedback
+import 'package:flutter/services.dart';
 import 'onboarding_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
@@ -18,8 +18,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   late AnimationController _swayController;
   late Animation<double> _swayAnimation;
 
-  double _elementsOpacity = 1.0; // For controlling fade-out
-  final Duration _fadeOutDuration = const Duration(milliseconds: 300); // Duration for fade-out
+  double _elementsOpacity = 1.0; 
+  final Duration _fadeOutDuration = const Duration(milliseconds: 300);
 
   @override
   void initState() {

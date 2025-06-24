@@ -32,10 +32,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Timer? _loadingTimer3;
 
   final ImagePicker _picker = ImagePicker();
-  final String apiKey = 'AIzaSyDFz86K4YfUtIuYsaIP-aMUME0uMSGg3oM'; // IMPORTANT: Secure your API key
+  final String apiKey = 'AIzaSyA73OQQiAiiUH5j99t60f23dBPECr2jUWk';
   final String endpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent';
-  final String flaskApiUrl = "https://context-based-pantun-rec-service-360024071473.asia-southeast1.run.app/recommend"; //
+  final String flaskApiUrl = "https://iramapuitika-v2-360024071473.asia-southeast1.run.app/recommend";
 
   // Specific error message string for scenery validation
   final String _invalidSceneryErrorMessage = "Error: Image is not a valid scenery. Please upload an image of grasslands, aquatic biomes, or forest biomes.";

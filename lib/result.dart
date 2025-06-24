@@ -84,7 +84,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     ),
                     if (widget.result.length > 1)
                       Padding(
-                        padding: EdgeInsets.only(bottom: screenHeight * 0.02, top: screenHeight * 0.01),
+                        padding: EdgeInsets.only(bottom: screenHeight * 0.02, top: screenHeight * 0.02),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
