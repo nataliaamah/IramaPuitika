@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:testing/result.dart';
+import 'package:testing/home_page.dart'; // Add this import at the top
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -31,7 +32,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   bool _isLoading = false;
   int _currentStep = 0;
   bool _isScenery = false;
-  bool _showEmotionWarning = false;
+  bool _showEmotionPopup = false; // <-- New field
 
   // Loading messages
   String? _loadingMessage1, _loadingMessage2, _loadingMessage3;
@@ -507,72 +508,102 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
     );
   }
 
-  Widget _emotionButton(String emotion, String assetPath, double screenWidth, double screenHeight, [double? textFs]) {
-    final bool isSelected = _selectedEmotion == emotion;
-    final double buttonSize = screenWidth * 0.25;
-    final double fontSize = textFs ?? (screenWidth * 0.045);
-
-    return GestureDetector(
-      onTap: _isLoading ? null : () {
-        setState(() {
-          _selectedEmotion = emotion;
-        });
-      },
-      child: Opacity(
-        opacity: _isLoading ? 0.6 : 1.0,
-        child: Container(
-          width: buttonSize,
-          padding: EdgeInsets.symmetric(vertical: screenHeight * 0.03, horizontal: screenWidth * 0.03),
-          decoration: BoxDecoration(
-            color: isSelected ? darkTealButton.withOpacity(0.85) : Colors.black.withOpacity(0.25),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? goldText : goldText.withOpacity(0.5),
-              width: isSelected ? 2.2 : 1.5,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: darkTealButton.withOpacity(0.4),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    )
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    )
-                ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                assetPath,
-                width: buttonSize * 0.5,
-                height: buttonSize * 0.5,
-                errorBuilder: (context, error, stackTrace) => Icon(
-                  Icons.sentiment_neutral, size: buttonSize * 0.5, color: isSelected ? Colors.white : goldText,
-                ),
-              ),
-              SizedBox(height: screenHeight * 0.01),
-              Text(
-                emotion,
-                style: GoogleFonts.poppins(
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? Colors.white : goldText,
-                ),
-              ),
-            ],
-          ),
-        ),
-      )
-    );
+  Color _emotionAccentColor(String emotion) {
+  switch (emotion) {
+    case 'Happy':
+      return const Color.fromARGB(255, 216, 201, 88); // Yellow (main accent)
+    case 'Angry':
+      return const Color.fromARGB(255, 216, 88, 88); // Red (main accent)
+    case 'Sad':
+      return const Color.fromARGB(255, 88, 139, 216); // Blue (main accent)
+    default:
+      return goldText;
   }
+}
+
+// Add this helper for a darker border color:
+Color _emotionBorderColor(String emotion) {
+  switch (emotion) {
+    case 'Happy':
+      return const Color.fromARGB(255, 193, 168, 45); // Darker yellow
+    case 'Angry':
+      return const Color.fromARGB(255, 167, 70, 70); // Darker red
+    case 'Sad':
+      return const Color.fromARGB(255, 74, 108, 168); // Darker blue
+    default:
+      return goldText;
+  }
+}
+
+// Update _emotionButton to use the new border color:
+Widget _emotionButton(String emotion, String assetPath, double screenWidth, double screenHeight, [double? textFs]) {
+  final bool isSelected = _selectedEmotion == emotion;
+  final double buttonSize = screenWidth * 0.25;
+  final double fontSize = textFs ?? (screenWidth * 0.045);
+  final Color accent = _emotionAccentColor(emotion);
+  final Color border = _emotionBorderColor(emotion);
+
+  return GestureDetector(
+    onTap: _isLoading ? null : () {
+      setState(() {
+        _selectedEmotion = emotion;
+      });
+    },
+    child: Opacity(
+      opacity: _isLoading ? 0.6 : 1.0,
+      child: Container(
+        width: buttonSize,
+        padding: EdgeInsets.symmetric(vertical: screenHeight * 0.03, horizontal: screenWidth * 0.03),
+        decoration: BoxDecoration(
+          color: isSelected ? accent.withOpacity(0.85) : Colors.black.withOpacity(0.25),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? border : goldText.withOpacity(0.5),
+            width: isSelected ? 2.2 : 1.5,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: accent.withOpacity(0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  )
+              ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              assetPath,
+              width: buttonSize * 0.5,
+              height: buttonSize * 0.5,
+              errorBuilder: (context, error, stackTrace) => Icon(
+                Icons.sentiment_neutral, size: buttonSize * 0.5, color: isSelected ? Colors.white : goldText,
+              ),
+            ),
+            SizedBox(height: screenHeight * 0.01),
+            Text(
+              emotion,
+              style: GoogleFonts.poppins(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? Colors.white : goldText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    )
+  );
+}
 
   // --- UI Screens ---
   Widget _emotionSelectionScreen(double screenWidth, double screenHeight) {
@@ -661,73 +692,110 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
               ),
             ),
           ),
-          SizedBox(height: screenHeight * 0.22),
-          FadeInUp(
-            delay: const Duration(milliseconds: 800),
-            child: Column(
-              children: [
-                // Reserve space for warning, animate its appearance, and use yellow color
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: _showEmotionWarning
-                      ? Container(
-                          key: const ValueKey('warning'),
-                          height: screenHeight * 0.035,
-                          alignment: Alignment.center,
-                          child: Text(
-                            'Please select an emotion first.',
-                            style: GoogleFonts.poppins(
-                              fontSize: screenWidth * 0.045,
-                              color: goldText, // yellow
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.8,
+          SizedBox(height: screenHeight * 0.20),
+          // --- Adaptive spacing and popup above the Continue button ---
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Reserve a fixed height for the popup + spacing, so the Continue button never moves
+              final double popupHeight = screenHeight * 0.048; // enough for popup or just spacing
+              return Column(
+                children: [
+                  SizedBox(
+                    height: popupHeight,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: _showEmotionPopup
+                          ? Container(
+                              key: const ValueKey('popup'),
+                              alignment: Alignment.center,
+                              padding: EdgeInsets.symmetric(
+                                  vertical: screenHeight * 0.008,
+                                  horizontal: screenWidth * 0.06),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.50),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                'Please select an emotion first.',
+                                style: GoogleFonts.poppins(
+                                  color: goldText,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: screenWidth * 0.042,
+                                  letterSpacing: 0.5,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : SizedBox(
+                              key: const ValueKey('nopopup'),
+                              height: popupHeight,
                             ),
-                          ),
-                        )
-                      : SizedBox(
-                          key: const ValueKey('nowarning'),
-                          height: screenHeight * 0.035,
-                        ),
-                ),
-                _buildStyledButton(
-                  text: 'Continue',
-                  onPressed: _selectedEmotion != null && !_isLoading
-                      ? () {
-                          HapticFeedback.lightImpact();
-                          setState(() {
-                            _showEmotionWarning = false;
-                          });
-                          _pageController.nextPage(
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeInOut,
-                          );
-                        }
-                      : () {
-                          setState(() {
-                            _showEmotionWarning = true;
-                          });
-                        },
-                  isPrimary: true,
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
-                ),
-                SizedBox(height: screenHeight * 0.01),
-                _buildStyledButton(
-                  text: 'Back to Home',
-                  onPressed: _isLoading
-                      ? null
-                      : () {
-                          HapticFeedback.lightImpact();
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
+                    ),
+                  ),
+                  _buildStyledButton(
+                    text: 'Continue',
+                    onPressed: _selectedEmotion != null && !_isLoading
+                        ? () {
+                            HapticFeedback.lightImpact();
+                            setState(() {
+                              _showEmotionPopup = false;
+                            });
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeInOut,
+                            );
                           }
-                        },
-                  isPrimary: false,
-                  screenWidth: screenWidth,
-                  screenHeight: screenHeight,
-                ),
-              ],
-            ),
+                        : () {
+                            if (!_isLoading) {
+                              setState(() {
+                                _showEmotionPopup = true;
+                              });
+                              Future.delayed(const Duration(seconds: 2), () {
+                                if (mounted) {
+                                  setState(() {
+                                    _showEmotionPopup = false;
+                                  });
+                                }
+                              });
+                            }
+                          },
+                    isPrimary: true,
+                    screenWidth: screenWidth,
+                    screenHeight: screenHeight,
+                  ),
+                  SizedBox(height: screenHeight * 0.01),
+                  GestureDetector(
+                    onTap: _isLoading
+                        ? null
+                        : () {
+                            HapticFeedback.lightImpact();
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (context) => const HomePage()),
+                              (route) => false,
+                            );
+                          },
+                    child: Text(
+                      'Back to Home',
+                      style: GoogleFonts.poppins(
+                        fontSize: screenWidth * 0.045,
+                        color: goldText,
+                        decoration: TextDecoration.underline,
+                        decorationColor: goldText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -1072,28 +1140,28 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
                                       valueColor: AlwaysStoppedAnimation<Color>(primaryBackground),
                                       strokeWidth: 3,
                                     ),
-                                  ),
+                                  )
                                 );
-                              },
-                            ),
-                          SizedBox(height: screenHeight * 0.03),
-                          Text(
-                            _getLoadingOverlayText(),
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              color: goldText,
-                              fontSize: screenWidth * 0.045,
-                              fontWeight: FontWeight.w500,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
+                                },
+                              ),
+                              SizedBox(height: screenHeight * 0.03),
+                              Text(
+                                _getLoadingOverlayText(),
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  color: goldText,
+                                  fontSize: screenWidth * 0.045,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.4,
+                                ),
+                              ),
+                          ],
+                      ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
         ],
       ),
     );
