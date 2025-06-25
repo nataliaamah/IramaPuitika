@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     return Scaffold(
       key: _pageKey,
-      backgroundColor: const Color.fromARGB(255, 37, 112, 81), // Set solid blue as background behind image
+      backgroundColor: const Color.fromARGB(255, 63, 124, 96), // Set solid blue as background behind image
       body: Stack(
         fit: StackFit.expand,
         children: [
