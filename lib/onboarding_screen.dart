@@ -33,6 +33,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   int _currentStep = 0;
   bool _isScenery = false;
   bool _showEmotionPopup = false; // <-- New field
+  String? _loadingTask; // <-- Add this line
 
   // Loading messages
   String? _loadingMessage1, _loadingMessage2, _loadingMessage3;
@@ -127,15 +128,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   }
 
   // --- Loading Overlay ---
-  void _setLoading(bool isLoading) {
+  // Modify _setLoading to accept an optional task string
+  void _setLoading(bool isLoading, {String? task}) {
     if (!mounted) return;
     setState(() {
       _isLoading = isLoading;
+      _loadingTask = task; // <-- Update the loading task
       if (isLoading) {
         _loadingMessage1 = _loadingMessage2 = _loadingMessage3 = null;
         _loadingTimer1?.cancel();
         _loadingTimer2?.cancel();
         _loadingTimer3?.cancel();
+        // Adjust timer durations if needed for different tasks
         _loadingTimer1 = Timer(const Duration(seconds: 6), () {
           if (mounted && _isLoading) {
             setState(() {
@@ -166,6 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
         _loadingTimer2?.cancel();
         _loadingTimer3?.cancel();
         _loadingMessage1 = _loadingMessage2 = _loadingMessage3 = null;
+        _loadingTask = null; // <-- Clear task when loading stops
       }
     });
   }
@@ -180,17 +185,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       if (pickedFile != null) {
         setState(() {
           _selectedImage = File(pickedFile.path);
-          _keywords = 'Analyzing image...';
+          _keywords = 'Analyzing image...'; // Keep this initial text
           _isScenery = false;
         });
-        _setLoading(true);
+        _setLoading(true, task: 'image'); // <-- Set task to 'image'
         await _uploadAndAnalyzeImage();
       }
     } catch (e) {
       setState(() {
         _keywords = "Could not select image. Please try again.";
       });
-      _setLoading(false);
+      _setLoading(false); // <-- Clear task on error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -209,14 +214,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           _keywords = 'No image selected.';
         });
       }
-      _setLoading(false);
+      _setLoading(false); // <-- Clear task on early exit
       return;
     }
     if (_selectedEmotion == null) {
       setState(() {
         _keywords = 'Please select an emotion before uploading an image.';
       });
-      _setLoading(false);
+      _setLoading(false); // <-- Clear task on early exit
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -347,7 +352,7 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
         _isScenery = false;
       });
     } finally {
-      if (mounted) _setLoading(false);
+      if (mounted) _setLoading(false); // <-- Clear task in finally block
     }
   }
 
@@ -385,7 +390,7 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
       return;
     }
 
-    _setLoading(true);
+    _setLoading(true, task: 'pantun'); // <-- Set task to 'pantun'
     try {
       final imageKeywordsList = _keywords.split(', ').map((word) => word.trim()).where((word) => word.isNotEmpty).toList();
 
@@ -438,20 +443,22 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
         );
       }
     } finally {
-      if (mounted) _setLoading(false);
+      if (mounted) _setLoading(false); // <-- Clear task in finally block
     }
   }
 
   // --- UI Helpers ---
   String _getLoadingOverlayText() {
     String baseText;
-    if (_keywords == 'Analyzing image...' && _currentStep == 0) {
+    // Use _loadingTask to determine the base text
+    if (_loadingTask == 'image') {
       baseText = 'Analyzing Image...';
-    } else if (_selectedEmotion != null && _currentStep == 1) {
-      baseText = 'Generating Pantun...';
+    } else if (_loadingTask == 'pantun') {
+      baseText = 'Recommending Pantun...';
     } else {
-      baseText = 'Loading...';
+      baseText = 'Loading...'; // Default or initial state
     }
+
     if (_loadingMessage3 != null) return '$baseText\n$_loadingMessage3';
     if (_loadingMessage2 != null) return '$baseText\n$_loadingMessage2';
     if (_loadingMessage1 != null) return '$baseText\n$_loadingMessage1';
@@ -511,38 +518,37 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
   Color _emotionAccentColor(String emotion) {
   switch (emotion) {
     case 'Happy':
-      return const Color.fromARGB(255, 216, 201, 88); // Yellow (main accent)
+      return const Color.fromARGB(255, 218, 165, 32); // Warm golden yellow
     case 'Angry':
-      return const Color.fromARGB(255, 216, 88, 88); // Red (main accent)
+      return const Color.fromARGB(255, 205, 92, 92); // Softer coral-red
     case 'Sad':
-      return const Color.fromARGB(255, 88, 139, 216); // Blue (main accent)
+      return const Color.fromARGB(255, 95, 158, 160); // Muted teal-blue
     default:
       return goldText;
   }
 }
 
-// Add this helper for a darker border color:
 Color _emotionBorderColor(String emotion) {
   switch (emotion) {
     case 'Happy':
-      return const Color.fromARGB(255, 193, 168, 45); // Darker yellow
+      return const Color.fromARGB(255, 184, 134, 11); // Deeper gold
     case 'Angry':
-      return const Color.fromARGB(255, 167, 70, 70); // Darker red
+      return const Color.fromARGB(255, 169, 69, 69); // Deeper coral
     case 'Sad':
-      return const Color.fromARGB(255, 74, 108, 168); // Darker blue
+      return const Color.fromARGB(255, 69, 128, 130); // Deeper teal
     default:
       return goldText;
   }
 }
 
-// Update _emotionButton to use the new border color:
+// Also consider updating the unselected state to be warmer:
 Widget _emotionButton(String emotion, String assetPath, double screenWidth, double screenHeight, [double? textFs]) {
   final bool isSelected = _selectedEmotion == emotion;
   final double buttonSize = screenWidth * 0.25;
   final double fontSize = textFs ?? (screenWidth * 0.045);
   final Color accent = _emotionAccentColor(emotion);
   final Color border = _emotionBorderColor(emotion);
-
+  
   return GestureDetector(
     onTap: _isLoading ? null : () {
       setState(() {
@@ -555,26 +561,30 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
         width: buttonSize,
         padding: EdgeInsets.symmetric(vertical: screenHeight * 0.03, horizontal: screenWidth * 0.03),
         decoration: BoxDecoration(
-          color: isSelected ? accent.withOpacity(0.85) : Colors.black.withOpacity(0.25),
+          color: isSelected 
+            ? accent.withOpacity(0.85) 
+            : const Color.fromARGB(255, 76, 111, 105).withOpacity(0.3), // Warmer dark green instead of black
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? border : goldText.withOpacity(0.5),
+            color: isSelected 
+              ? border 
+              : const Color.fromARGB(255, 218, 165, 32).withOpacity(0.6), // Warm gold border instead of goldText
             width: isSelected ? 2.2 : 1.5,
           ),
           boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: accent.withOpacity(0.4),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  )
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  )
+            ? [
+                BoxShadow(
+                  color: accent.withOpacity(0.4),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                )
+              ]
+            : [
+                BoxShadow(
+                  color: const Color.fromARGB(255, 76, 111, 105).withOpacity(0.15), // Warmer shadow
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
+                )
               ],
         ),
         child: Column(
@@ -586,7 +596,9 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
               width: buttonSize * 0.5,
               height: buttonSize * 0.5,
               errorBuilder: (context, error, stackTrace) => Icon(
-                Icons.sentiment_neutral, size: buttonSize * 0.5, color: isSelected ? Colors.white : goldText,
+                Icons.sentiment_neutral, 
+                size: buttonSize * 0.5, 
+                color: isSelected ? Colors.white : const Color.fromARGB(255, 218, 165, 32),
               ),
             ),
             SizedBox(height: screenHeight * 0.01),
@@ -595,7 +607,7 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
               style: GoogleFonts.poppins(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : goldText,
+                color: isSelected ? Colors.white : const Color.fromARGB(255, 218, 165, 32), // Warm gold text
               ),
             ),
           ],
@@ -803,170 +815,401 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
   }
 
   Widget _imageInputScreen(double screenWidth, double screenHeight) {
-    final double titleFs = screenWidth * 0.07;
-    final double subtitleFs = screenWidth * 0.045;
-    final double bodyFs = screenWidth * 0.038;
-    final double buttonFs = screenWidth * 0.045;
+  bool showSceneryError = !_isScenery && _keywords == _invalidSceneryErrorMessage && _selectedImage != null;
 
-    bool showSceneryError = !_isScenery && _keywords == _invalidSceneryErrorMessage && _selectedImage != null;
-
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06, vertical: screenHeight * 0.02),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(height: screenHeight * 0.05),
-          Text(
-            'Step 2: Upload Scenery',
+  return SingleChildScrollView(
+    padding: EdgeInsets.symmetric(
+      horizontal: screenWidth * 0.06,
+      vertical: screenHeight * 0.02,
+    ),
+    child: Column(
+      children: [
+        SizedBox(height: screenHeight * 0.06),
+        
+        // Header section matching emotion selection screen
+        FadeInDown(
+          delay: const Duration(milliseconds: 200),
+          child: Column(
+            children: [
+              Text(
+                'Upload Your Scenery',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.playfairDisplay(
+                  fontSize: screenWidth * 0.08,
+                  fontWeight: FontWeight.w600,
+                  color: goldText,
+                  fontStyle: FontStyle.italic,
+                  height: 1.2,
+                ),
+              ),
+              SizedBox(height: screenHeight * 0.015),
+              Container(
+                width: screenWidth * 0.3,
+                height: 2,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      goldText.withOpacity(0.3),
+                      goldText,
+                      goldText.withOpacity(0.3),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        SizedBox(height: screenHeight * 0.02),
+        
+        // Subtitle matching the emotion selection screen
+        FadeInDown(
+          delay: const Duration(milliseconds: 400),
+          child: Text(
+            'Choose a scenery image that resonates with your emotion',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
-              fontSize: titleFs,
-              fontWeight: FontWeight.w600,
-              color: goldText,
+              fontSize: screenWidth * 0.042,
+              color: lightGoldAccent.withOpacity(0.9),
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0.3,
             ),
           ),
-          SizedBox(height: screenHeight * 0.015),
-          Text(
-            'Choose a scenery image that resonates with you.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: subtitleFs,
-              color: lightGoldAccent,
+        ),
+        
+        SizedBox(height: screenHeight * 0.08),
+        
+        // Image upload container with consistent styling
+        FadeInUp(
+          delay: const Duration(milliseconds: 600),
+          child: Container(
+            padding: EdgeInsets.all(screenWidth * 0.04),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: goldText.withOpacity(0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
             ),
-          ),
-          SizedBox(height: screenHeight * 0.04),
-          GestureDetector(
-            onTap: _isLoading ? null : () {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: const Color(0xFFAB5D5D).withOpacity(0.9),
-                builder: (BuildContext context) {
-                  return SafeArea(
-                    child: Wrap(
-                      children: <Widget>[
-                        ListTile(
-                          leading: Icon(Icons.photo_library, color: lightGoldAccent),
-                          title: Text('Choose from Gallery', style: GoogleFonts.poppins(color: lightGoldAccent)),
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _pickImage(fromCamera: false);
-                          },
-                        ),
-                        ListTile(
-                          leading: Icon(Icons.camera_alt, color: lightGoldAccent),
-                          title: Text('Take a Photo', style: GoogleFonts.poppins(color: lightGoldAccent)),
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            _pickImage(fromCamera: true);
-                          },
-                        ),
-                      ],
+            child: Column(
+              children: [
+                // Image upload area
+                GestureDetector(
+                  onTap: _isLoading ? null : () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: cardBackground.withOpacity(0.95),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (BuildContext context) {
+                        return SafeArea(
+                          child: Container(
+                            padding: EdgeInsets.all(screenWidth * 0.04),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 6,
+                                  margin: EdgeInsets.only(bottom: screenHeight * 0.02),
+                                  decoration: BoxDecoration(
+                                    color: goldText.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                Text(
+                                  'Choose Image Source',
+                                  style: GoogleFonts.poppins(
+                                    color: goldText,
+                                    fontSize: screenWidth * 0.05,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(height: screenHeight * 0.03),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          Navigator.of(context).pop();
+                                          _pickImage(fromCamera: false);
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.25),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: goldText.withOpacity(0.5),
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              Icon(Icons.photo_library, 
+                                                   size: screenWidth * 0.08, 
+                                                   color: goldText),
+                                              SizedBox(height: screenHeight * 0.01),
+                                              Text('Gallery', 
+                                                   style: GoogleFonts.poppins(
+                                                     color: goldText,
+                                                     fontSize: screenWidth * 0.04,
+                                                     fontWeight: FontWeight.w500,
+                                                   )),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: screenWidth * 0.04),
+                                    Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          Navigator.of(context).pop();
+                                          _pickImage(fromCamera: true);
+                                        },
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.25),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: goldText.withOpacity(0.5),
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            children: [
+                                              Icon(Icons.camera_alt, 
+                                                   size: screenWidth * 0.08, 
+                                                   color: goldText),
+                                              SizedBox(height: screenHeight * 0.01),
+                                              Text('Camera', 
+                                                   style: GoogleFonts.poppins(
+                                                     color: goldText,
+                                                     fontSize: screenWidth * 0.04,
+                                                     fontWeight: FontWeight.w500,
+                                                   )),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: screenHeight * 0.02),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    constraints: BoxConstraints(
+                      minHeight: screenHeight * 0.20, // was 0.25
+                      maxHeight: screenHeight * 0.25, // was 0.30
                     ),
-                  );
-                },
-              );
-            },
-            child: Container(
-              width: screenWidth * 0.7,
-              constraints: BoxConstraints(
-                maxWidth: screenWidth * 0.7,
-                minHeight: screenHeight * 0.22,
-                maxHeight: screenHeight * 0.25,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.25),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: goldText.withOpacity(0.7), width: 2),
-              ),
-              child: _selectedImage != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(13),
-                      child: Image.file(_selectedImage!, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
-                    )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: goldText.withOpacity(0.5), 
+                        width: 1.5
+                      ),
+                    ),
+                    child: _selectedImage != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(13),
+                            child: Image.file(
+                              _selectedImage!, 
+                              fit: BoxFit.cover, 
+                              width: double.infinity, 
+                              height: double.infinity
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.landscape_outlined,
+                                size: screenWidth * 0.12,
+                                color: goldText,
+                              ),
+                              SizedBox(height: screenHeight * 0.015),
+                              Text(
+                                'Tap to Upload Image',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: screenWidth * 0.045,
+                                  color: goldText,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(height: screenHeight * 0.008),
+                              Text(
+                                'Choose grasslands, forests, or aquatic scenes',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: screenWidth * 0.035,
+                                  color: lightGoldAccent.withOpacity(0.8),
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                
+                SizedBox(height: screenHeight * 0.02),
+                
+                // Keywords or error display
+                if (showSceneryError)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenHeight * 0.015, 
+                      horizontal: screenWidth * 0.04
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.redAccent.withOpacity(0.6), 
+                        width: 1
+                      ),
+                    ),
+                    child: Row(
                       children: [
                         Icon(
-                          Icons.landscape_outlined,
-                          size: screenWidth * 0.12,
-                          color: goldText,
+                          Icons.error_outline,
+                          color: Colors.red.shade300,
+                          size: screenWidth * 0.05,
                         ),
-                        SizedBox(height: screenHeight * 0.015),
-                        Text(
-                          'Tap to Upload Image',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            fontSize: subtitleFs * 0.9,
-                            color: goldText,
+                        SizedBox(width: screenWidth * 0.03),
+                        Expanded(
+                          child: Text(
+                            _keywords,
+                            style: GoogleFonts.poppins(
+                              color: Colors.red.shade300, 
+                              fontSize: screenWidth * 0.038, 
+                              fontWeight: FontWeight.w500
+                            ),
                           ),
                         ),
                       ],
                     ),
+                  )
+                else if (_selectedImage != null && 
+                         !_isLoading && 
+                         _keywords != 'Analyzing image...' && 
+                         _keywords != _invalidSceneryErrorMessage && 
+                         !_keywords.startsWith("Upload an image"))
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      vertical: screenHeight * 0.015, 
+                      horizontal: screenWidth * 0.04
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.green.withOpacity(0.4), 
+                        width: 1
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green.shade300,
+                          size: screenWidth * 0.05,
+                        ),
+                        SizedBox(width: screenWidth * 0.03),
+                        Expanded(
+                          child: Text(
+                            "Keywords: $_keywords",
+                            style: GoogleFonts.poppins(
+                              color: Colors.green.shade300, 
+                              fontSize: screenWidth * 0.038, 
+                              fontWeight: FontWeight.w500
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
-          SizedBox(height: screenHeight * 0.03),
-          if (showSceneryError)
-            Container(
-              margin: EdgeInsets.only(top: 0, bottom: screenHeight * 0.01),
-              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.012, horizontal: screenWidth * 0.03),
-              decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.6), width: 1),
-              ),
-              child: Text(
-                _keywords,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: Colors.red.shade300, fontSize: bodyFs * 0.95, fontWeight: FontWeight.w500),
-              ),
-            )
-          else if (_selectedImage != null && !_isLoading && _keywords != 'Analyzing image...' && _keywords != _invalidSceneryErrorMessage && !_keywords.startsWith("Upload an image"))
-             Padding(
-              padding: EdgeInsets.symmetric(vertical: screenHeight * 0.012),
-              child: Text(
-                "Keywords: $_keywords",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(color: lightGoldAccent, fontSize: bodyFs),
-              ),
-            ),
-          SizedBox(height: screenHeight * 0.02),
-          ElevatedButton(
-            onPressed: _selectedImage != null && !_isLoading && _isScenery
-                ? _fetchPantunRecommendations
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: darkTealButton,
-              foregroundColor: goldText,
-              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.12, vertical: screenHeight * 0.018),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-              textStyle: GoogleFonts.poppins(fontSize: buttonFs, fontWeight: FontWeight.w600),
-            ),
-            child: const Text('Generate Pantun'),
-          ),
-          SizedBox(height: screenHeight * 0.02),
-          TextButton(
-            onPressed: _isLoading ? null : () => _pageController.previousPage(
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-            ),
-            child: Text(
-              'Go Back',
-              style: GoogleFonts.poppins(
-                fontSize: subtitleFs * 0.9,
-                color: _isLoading ? goldText.withOpacity(0.5) : goldText,
-                decoration: TextDecoration.underline,
-                decorationColor: goldText.withOpacity(0.8),
-                decorationThickness: 1.5,
-              ),
-            ),
-          ),
-          SizedBox(height: screenHeight * 0.02),
-        ],
-      ),
-    );
-  }
+        ),
+        
+        SizedBox(height: screenHeight * 0.12),
+        
+        // Buttons section with consistent spacing
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final double buttonAreaHeight = screenHeight * 0.2;
+            return Column(
+              children: [
+                SizedBox(
+                  height: buttonAreaHeight,
+                  child: Column(
+                    children: [
+                      _buildStyledButton(
+                        text: 'Generate Pantun',
+                        onPressed: _selectedImage != null && !_isLoading && _isScenery
+                            ? () {
+                                HapticFeedback.lightImpact();
+                                _fetchPantunRecommendations();
+                              }
+                            : null,
+                        isPrimary: true,
+                        screenWidth: screenWidth,
+                        screenHeight: screenHeight,
+                      ),
+                      SizedBox(height: screenHeight * 0.01),
+                      GestureDetector(
+                        onTap: _isLoading
+                            ? null
+                            : () {
+                                HapticFeedback.lightImpact();
+                                _pageController.previousPage(
+                                  duration: const Duration(milliseconds: 400),
+                                  curve: Curves.easeInOut,
+                                );
+                              },
+                        child: Text(
+                          'Go Back',
+                          style: GoogleFonts.poppins(
+                            fontSize: screenWidth * 0.045,
+                            color: _isLoading ? goldText.withOpacity(0.5) : goldText,
+                            decoration: TextDecoration.underline,
+                            decorationColor: goldText,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -987,6 +1230,12 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
       backgroundColor: primaryBackground,
       body: Stack(
         children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/background.png',
+              fit: BoxFit.cover,
+            ),
+          ),
           if (_backgroundAnimation != null)
             Positioned.fill(
               child: AnimatedBuilder(
@@ -998,8 +1247,8 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            primaryBackground,
                             primaryBackground.withOpacity(0.8),
+                            primaryBackground.withOpacity(0.5),
                             cardBackground,
                           ],
                           begin: Alignment.topLeft,
