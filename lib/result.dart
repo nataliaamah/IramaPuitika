@@ -55,6 +55,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
     return Scaffold(
       backgroundColor: backgroundSolid, // Matching HomePage background
+      extendBodyBehindAppBar: true, // Add this line
       appBar: _buildAppBar(screenWidth),
       body: Stack(
         fit: StackFit.expand,
