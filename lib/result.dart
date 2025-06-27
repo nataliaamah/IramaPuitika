@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:animate_do/animate_do.dart';
 import 'viewpantundetails.dart'; // Assuming this is your detail screen
 
-// Colors from onboarding_screen.dart for cohesion
-const LinearGradient maroonGradientBackground = LinearGradient(
-  colors: [Color(0xFF8A1D37), Color(0xFFAB5D5D)],
-  begin: Alignment.topCenter,
-  end: Alignment.bottomCenter,
-);
-const Color goldText = Color(0xFFE6C68A);
-const Color darkTealButton = Color(0xFF004D40); // Can be used for text or accents
-const Color lightGoldAccent = Color(0xFFF5EAD0); // Good for card backgrounds
+// Updated colors to match HomePage theme
+const Color goldText = Color(0xFFEAD7A6); // Matching HomePage goldText
+const Color buttonColor = Color(0xFF003E4C); // Matching HomePage buttonColor
+const Color backgroundSolid = Color.fromARGB(255, 63, 124, 96); // Matching HomePage background
+const Color lightGoldAccent = Color(0xFFF5EAD0); // Keeping existing accent
+const Color cardOverlay = Color(0xFF1A3A32); // Subtle dark overlay for better text contrast
 
 class ResultScreen extends StatefulWidget {
   final List<Map<String, dynamic>> result;
@@ -22,13 +20,31 @@ class ResultScreen extends StatefulWidget {
   State<ResultScreen> createState() => _ResultScreenState();
 }
 
-class _ResultScreenState extends State<ResultScreen> {
-  int currentIndex = 0; // This will be updated by onUpdateIndex for the Text widget
+class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderStateMixin {
+  int currentIndex = 0;
   final CardSwiperController _swiperController = CardSwiperController();
+
+  // Animation controller for subtle animations matching HomePage
+  late AnimationController _swayController;
+  Animation<double>? _swayAnimation; // Make nullable to avoid LateInitializationError
+
+  @override
+  void initState() {
+    super.initState();
+    _swayController = AnimationController(
+      duration: const Duration(seconds: 8),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _swayAnimation = Tween<double>(begin: -0.002, end: 0.002).animate(
+      CurvedAnimation(parent: _swayController, curve: Curves.easeInOut),
+    );
+  }
 
   @override
   void dispose() {
-    _swiperController.dispose(); // Dispose the controller
+    _swiperController.dispose();
+    _swayController.dispose();
     super.dispose();
   }
 
@@ -38,105 +54,251 @@ class _ResultScreenState extends State<ResultScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      appBar: _buildAppBar(),
-      body: Container(
-        decoration: const BoxDecoration(gradient: maroonGradientBackground),
-        child: SafeArea( // Content will be within the safe area
-          child: widget.result.isEmpty
-              ? _noResultsFound(screenWidth, screenHeight)
-              : Column(
-                  children: [
-                    Expanded(
-                      child: CardSwiper(
-                        controller: _swiperController,
-                        cardsCount: widget.result.length,
-                        numberOfCardsDisplayed: widget.result.length < 3 ? widget.result.length : 3,
-                        isLoop: true,
-                        backCardOffset: const Offset(0, 10),
-                        // ADJUST THIS PADDING TO CONTROL CARD SIZE AND ASPECT RATIO:
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.001, // Example: try adjusting this
-                          vertical: screenHeight * 0.12  // Example: try adjusting this
-                        ),
-                        onSwipe: (prevIndex, newSwipedIndex, direction) {
-                          if (mounted) {
-                            setState(() {
-                              currentIndex = newSwipedIndex ?? 0;
-                            });
-                          }
-                          return true;
-                        },
-                        onUndo: (previousIndex, originalIndex, direction) {
-                          if (mounted) {
-                            setState(() {
-                              currentIndex = originalIndex;
-                            });
-                          }
-                          return true; // Allow the undo.
-                        },
-                        cardBuilder: (context, index, hThreshold, vThreshold) {
-                          final pantunData = widget.result[index];
-                          // Determine if the card is the front card based on the state's currentIndex
-                          bool isEffectivelyFront = index == currentIndex;
-                          return _pantunCard(context, pantunData, isDimmed: !isEffectivelyFront);
-                        },
-                      ),
-                    ),
-                    if (widget.result.length > 1)
-                      Padding(
-                        padding: EdgeInsets.only(bottom: screenHeight * 0.02, top: screenHeight * 0.02),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.arrow_back_ios, color: lightGoldAccent.withOpacity(0.8)),
-                              onPressed: widget.result.isNotEmpty
-                                  ? () => _swiperController.undo()
-                                  : null,
-                            ),
-                            Text(
-                              // This Text widget uses the _ResultScreenState.currentIndex
-                              "${currentIndex + 1} / ${widget.result.length}",
-                              style: GoogleFonts.poppins(
-                                  fontSize: screenWidth * 0.04,
-                                  color: lightGoldAccent,
-                                  fontWeight: FontWeight.w500),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.arrow_forward_ios, color: lightGoldAccent.withOpacity(0.8)),
-                              onPressed: widget.result.isNotEmpty
-                                  ? () => _swiperController.swipe(CardSwiperDirection.right)
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      )
-                  ],
+      backgroundColor: backgroundSolid, // Matching HomePage background
+      appBar: _buildAppBar(screenWidth),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background image matching HomePage structure
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/background.png',
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: backgroundSolid,
+              ),
+            ),
+          ),
+
+          // Subtle decorative elements (optional, matching HomePage style)
+          // Add null check for _swayAnimation
+          if (_swayAnimation != null) // <-- Add this check
+            Positioned(
+              top: -50,
+              right: -100,
+              child: RotationTransition(
+                turns: _swayAnimation!, // <-- Use non-null assertion after check
+                child: Opacity(
+                  opacity: 0.1,
+                  child: Image.asset(
+                    'assets/images/batik_element_top_right.png',
+                    width: screenWidth * 0.6,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+                  ),
                 ),
+              ),
+            ),
+
+          SafeArea(
+            child: widget.result.isEmpty
+                ? _noResultsFound(screenWidth, screenHeight)
+                : FadeInUp(
+                    duration: const Duration(milliseconds: 600),
+                    child: Column(
+                      children: [
+                        // Title section matching HomePage style
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.07,
+                            vertical: screenHeight * 0.02,
+                          ),
+                          child: FadeInDown(
+                            delay: const Duration(milliseconds: 200),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Your Pantun',
+                                  style: GoogleFonts.playfairDisplay(
+                                    fontSize: screenWidth * 0.08,
+                                    color: goldText,
+                                    fontWeight: FontWeight.normal,
+                                    fontStyle: FontStyle.italic,
+                                    letterSpacing: 1.2,
+                                    shadows: [
+                                      Shadow(
+                                        offset: const Offset(0, 2),
+                                        blurRadius: 4,
+                                        color: Colors.black.withOpacity(0.3),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Poetry crafted from your emotions',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: screenWidth * 0.035,
+                                    color: goldText.withOpacity(0.8),
+                                    fontWeight: FontWeight.w300,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Card swiper section
+                        Expanded(
+                          child: FadeInUp(
+                            delay: const Duration(milliseconds: 400),
+                            child: CardSwiper(
+                              controller: _swiperController,
+                              cardsCount: widget.result.length,
+                              numberOfCardsDisplayed: widget.result.length < 3 ? widget.result.length : 3,
+                              isLoop: true,
+                              backCardOffset: const Offset(0, 15),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.05,
+                                vertical: screenHeight * 0.08,
+                              ),
+                              onSwipe: (prevIndex, newSwipedIndex, direction) {
+                                if (mounted) {
+                                  setState(() {
+                                    currentIndex = newSwipedIndex ?? 0;
+                                  });
+                                }
+                                return true;
+                              },
+                              onUndo: (previousIndex, originalIndex, direction) {
+                                if (mounted) {
+                                  setState(() {
+                                    currentIndex = originalIndex;
+                                  });
+                                }
+                                return true;
+                              },
+                              cardBuilder: (context, index, hThreshold, vThreshold) {
+                                final pantunData = widget.result[index];
+                                bool isEffectivelyFront = index == currentIndex;
+                                return _pantunCard(context, pantunData, screenWidth, isDimmed: !isEffectivelyFront);
+                              },
+                            ),
+                          ),
+                        ),
+
+                        // Navigation controls matching HomePage button style
+                        if (widget.result.length > 1)
+                          FadeInUp(
+                            delay: const Duration(milliseconds: 600),
+                            child: Container(
+                              margin: EdgeInsets.only(
+                                bottom: screenHeight * 0.03,
+                                top: screenHeight * 0.02,
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.1,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: buttonColor.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(25),
+                                boxShadow: [
+                                  BoxShadow(
+                                    offset: const Offset(0, 4),
+                                    blurRadius: 12,
+                                    color: Colors.black.withOpacity(0.2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildNavButton(
+                                    icon: Icons.arrow_back_ios_rounded,
+                                    onPressed: () => _swiperController.undo(),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                                    child: Text(
+                                      "${currentIndex + 1} / ${widget.result.length}",
+                                      style: GoogleFonts.poppins(
+                                        fontSize: screenWidth * 0.04,
+                                        color: goldText,
+                                        fontWeight: FontWeight.w500,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  _buildNavButton(
+                                    icon: Icons.arrow_forward_ios_rounded,
+                                    onPressed: () => _swiperController.swipe(CardSwiperDirection.right),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavButton({required IconData icon, required VoidCallback onPressed}) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: goldText.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(
+          icon,
+          color: goldText,
+          size: 20,
         ),
       ),
     );
   }
 
-  AppBar _buildAppBar() {
+  AppBar _buildAppBar(double screenWidth) {
     return AppBar(
       title: Text(
         "Results",
-        style: GoogleFonts.poppins(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: goldText, // Use goldText for AppBar title
+        style: GoogleFonts.playfairDisplay(
+          fontSize: screenWidth * 0.055,
+          fontWeight: FontWeight.w500,
+          color: goldText,
+          fontStyle: FontStyle.italic,
+          letterSpacing: 1.0,
         ),
       ),
       centerTitle: true,
-      elevation: 0, // No shadow for a flatter look with gradient
-      backgroundColor: maroonGradientBackground.colors.first, // Match gradient start
-      iconTheme: const IconThemeData(color: goldText), // Gold back button
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      iconTheme: IconThemeData(color: goldText),
+      leading: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: buttonColor.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                offset: const Offset(0, 2),
+                blurRadius: 8,
+                color: Colors.black.withOpacity(0.2),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.arrow_back_rounded,
+            color: goldText,
+            size: 22,
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _pantunCard(BuildContext context, Map<String, dynamic> pantunData, {bool isDimmed = false}) {
-    final screenWidth = MediaQuery.of(context).size.width;
+  Widget _pantunCard(BuildContext context, Map<String, dynamic> pantunData, double screenWidth, {bool isDimmed = false}) {
     final String theme = pantunData['theme'] as String? ?? 'default';
 
     String backgroundImagePath;
@@ -155,104 +317,218 @@ class _ResultScreenState extends State<ResultScreen> {
         backgroundImagePath = 'assets/images/default_paper_style_background.png';
     }
 
-    final pantunTextColor = isDimmed
-        ? Colors.black.withOpacity(0.5)
-        : Colors.black87;
-
-    // Process the pantun string to ensure newlines are rendered
+    // Process the pantun string
     String pantunText = pantunData['pantun'] as String? ?? 'Pantun not available';
-    // Replace common escaped newline sequences with actual newline characters
     pantunText = pantunText.replaceAll('\\r\\n', '\n').replaceAll('\\n', '\n').replaceAll('\\r', '\n');
-    // Replace punctuation followed by space(s) with punctuation followed by a newline
-    // This handles cases like "line1, line2" or "line1; line2"
     pantunText = pantunText.replaceAll(RegExp(r',\s+'), ',\n');
     pantunText = pantunText.replaceAll(RegExp(r';\s+'), ';\n');
 
-    return Opacity(
-      opacity: isDimmed ? 0.75 : 1.0,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
       child: Transform.scale(
-        scale: isDimmed ? 0.92 : 1.0,
-        // Removed Padding widget here or set its padding to EdgeInsets.zero
-        child: GestureDetector(
-          onTap: () {
-            if (!isDimmed) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PantunDetailScreen(pantunData: pantunData),
-                ),
-              );
-            }
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(backgroundImagePath),
-                fit: BoxFit.fitHeight, // Or BoxFit.fitHeight
-                onError: (exception, stackTrace) {
-                  debugPrint('Error loading image $backgroundImagePath: $exception');
-                },
-              ),
-            ),
-            child: Padding(
-              // This padding is for the text *inside* the image card
-              padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 45.0), // Adjust as needed
-              child: Center(
-                child: Text(
-                  pantunText, // Use the processed pantunText
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.tangerine(
-                    fontSize: screenWidth * 0.08, // Slightly increased text size
-                    fontWeight: FontWeight.w800,
-                    color: pantunTextColor,
-                    height: 1.2,
+        scale: isDimmed ? 0.95 : 1.0,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 300),
+          opacity: isDimmed ? 0.7 : 1.0,
+          child: GestureDetector(
+            onTap: () {
+              if (!isDimmed) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PantunDetailScreen(pantunData: pantunData),
                   ),
-                ),
+                );
+              }
+            },
+            child: Container( // This container provides the overall shape/decoration
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                // Remove the image decoration from here
+                // image: DecorationImage(...) // REMOVE THIS
+              ),
+              // REMOVE ClipRRect here
+              child: Stack( // Use Stack to layer background and content
+                children: [
+                  // Background image layer
+                  // REMOVE Positioned.fill here
+                  Transform.scale( // Apply scale specifically to the background image
+                    scale: 1.15, // Adjust this value to control the zoom level
+                    child: Image.asset(
+                      backgroundImagePath,
+                      fit: BoxFit.cover, // Image should cover the scaled area
+                      errorBuilder: (context, error, stackTrace) {
+                        debugPrint('Error loading image $backgroundImagePath: $error');
+                        // Return a fallback widget, e.g., a solid color or a placeholder
+                        return Container(
+                          color: Colors.grey[300], // Fallback color
+                          child: Center(
+                            child: Icon(Icons.broken_image, size: 50, color: Colors.grey[600]),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Optional: Subtle overlay for better text readability (if needed)
+                  /*
+                  Positioned.fill(
+                    child: Container(
+                      color: cardOverlay.withOpacity(isDimmed ? 0.3 : 0.2),
+                    ),
+                  ),
+                  */
+
+                  // Text content layer
+                  Positioned.fill( // Make the content fill the stack area
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 35.0, vertical: 50.0),
+                      child: Center(
+                        child: Text(
+                          pantunText,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.greatVibes(
+                            fontSize: screenWidth * 0.065,
+                            fontWeight: FontWeight.w500,
+                            color: isDimmed
+                                ? const Color.fromARGB(255, 45, 45, 45).withOpacity(0.6)
+                                : const Color.fromARGB(255, 45, 45, 45),
+                            height: 1.3,
+                            shadows: [
+                              Shadow(
+                                offset: const Offset(0, 1),
+                                blurRadius: 3,
+                                color: Colors.black.withOpacity(0.4),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Subtle tap indicator
+                  if (!isDimmed)
+                    Positioned(
+                      bottom: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: buttonColor.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.touch_app_rounded,
+                          color: goldText.withOpacity(0.8),
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
         ),
-      ),
+      )
     );
   }
 
-  String _formatKeywords(dynamic keywords) {
-    if (keywords is List) {
-      return keywords.join(', ');
-    } else if (keywords is String) {
-      return keywords;
-    }
-    return 'N/A';
-  }
-
   Widget _noResultsFound(double screenWidth, double screenHeight) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off_rounded, size: screenWidth * 0.2, color: lightGoldAccent.withOpacity(0.7)),
-            SizedBox(height: screenHeight * 0.03),
-            Text(
-              "No Matching Pantun Found",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: screenWidth * 0.05,
-                fontWeight: FontWeight.w600,
-                color: goldText,
+    return FadeInUp(
+      duration: const Duration(milliseconds: 800),
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.1),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FadeInDown(
+                delay: const Duration(milliseconds: 200),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: buttonColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Icon(
+                    Icons.search_off_rounded,
+                    size: screenWidth * 0.15,
+                    color: goldText.withOpacity(0.7),
+                  ),
+                ),
               ),
-            ),
-            SizedBox(height: screenHeight * 0.015),
-            Text(
-              "We couldn't find any pantun based on your image and emotion. Try a different scene or emotion!",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: screenWidth * 0.038,
-                color: lightGoldAccent.withOpacity(0.9),
+
+              SizedBox(height: screenHeight * 0.04),
+
+              FadeInUp(
+                delay: const Duration(milliseconds: 400),
+                child: Text(
+                  "No Matching Pantun Found",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize: screenWidth * 0.06,
+                    fontWeight: FontWeight.w500,
+                    color: goldText,
+                    fontStyle: FontStyle.italic,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ),
-            ),
-          ],
+
+              SizedBox(height: screenHeight * 0.02),
+
+              FadeInUp(
+                delay: const Duration(milliseconds: 600),
+                child: Text(
+                  "We couldn't find any pantun based on your image and emotion.\nTry a different scene or emotion to discover new poetry!",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: screenWidth * 0.038,
+                    color: goldText.withOpacity(0.8),
+                    height: 1.5,
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+
+              SizedBox(height: screenHeight * 0.05),
+
+              FadeInUp(
+                delay: const Duration(milliseconds: 800),
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: buttonColor,
+                    foregroundColor: goldText,
+                    minimumSize: const Size(200, 50),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.refresh_rounded, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Try Again',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
