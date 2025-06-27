@@ -125,14 +125,29 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                                   ),
                                 ),
                                 const SizedBox(height: 8),
+                                Container(
+                                  width: screenWidth * 0.4,
+                                  height: 2,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        goldText.withOpacity(0.3),
+                                        goldText,
+                                        goldText.withOpacity(0.3),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
                                 Text(
-                                  'Poetry crafted from your emotions',
+                                  'Recommended based on your\nemotion and surroundings',
                                   style: GoogleFonts.poppins(
                                     fontSize: screenWidth * 0.035,
                                     color: goldText.withOpacity(0.8),
                                     fontWeight: FontWeight.w300,
                                     letterSpacing: 0.5,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
@@ -151,7 +166,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                               backCardOffset: const Offset(0, 15),
                               padding: EdgeInsets.symmetric(
                                 horizontal: screenWidth * 0.05,
-                                vertical: screenHeight * 0.08,
+                                vertical: screenHeight * 0.04,
                               ),
                               onSwipe: (prevIndex, newSwipedIndex, direction) {
                                 if (mounted) {
@@ -243,7 +258,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: goldText.withOpacity(0.1),
           borderRadius: BorderRadius.circular(20),
@@ -288,7 +303,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
               ),
             ],
           ),
-          child: Icon(
+          child: const Icon(
             Icons.arrow_back_rounded,
             color: goldText,
             size: 22,
@@ -344,29 +359,27 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             child: Container( // This container provides the overall shape/decoration
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                // Remove the image decoration from here
-                // image: DecorationImage(...) // REMOVE THIS
               ),
-              // REMOVE ClipRRect here
-              child: Stack( // Use Stack to layer background and content
+              child: Stack(
                 children: [
                   // Background image layer
-                  // REMOVE Positioned.fill here
-                  Transform.scale( // Apply scale specifically to the background image
-                    scale: 1.15, // Adjust this value to control the zoom level
-                    child: Image.asset(
-                      backgroundImagePath,
-                      fit: BoxFit.cover, // Image should cover the scaled area
-                      errorBuilder: (context, error, stackTrace) {
-                        debugPrint('Error loading image $backgroundImagePath: $error');
-                        // Return a fallback widget, e.g., a solid color or a placeholder
-                        return Container(
-                          color: Colors.grey[300], // Fallback color
-                          child: Center(
-                            child: Icon(Icons.broken_image, size: 50, color: Colors.grey[600]),
-                          ),
-                        );
-                      },
+                  Positioned.fill( // Ensure the image layer fills the stack
+                    child: Transform.scale( // Apply scale specifically to the background image
+                      scale: 1.15, // Adjust this value to control the zoom level
+                      child: Image.asset(
+                        backgroundImagePath,
+                        fit: BoxFit.cover, // Image should cover the scaled area
+                        errorBuilder: (context, error, stackTrace) {
+                          debugPrint('Error loading image $backgroundImagePath: $error');
+                          // Return a fallback widget, e.g., a solid color or a placeholder
+                          return Container(
+                            color: Colors.grey[300], // Fallback color
+                            child: Center(
+                              child: Icon(Icons.broken_image, size: 50, color: Colors.grey[600]),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
 
@@ -380,7 +393,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                   */
 
                   // Text content layer
-                  Positioned.fill( // Make the content fill the stack area
+                  Positioned.fill( // Ensure the text layer fills the stack
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 35.0, vertical: 50.0),
                       child: Center(
@@ -410,18 +423,25 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                   // Subtle tap indicator
                   if (!isDimmed)
                     Positioned(
-                      bottom: 16,
-                      right: 16,
+                      bottom: 90, // Keep original position
+                      right: 15, // Keep original position
                       child: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: buttonColor.withOpacity(0.8),
-                          borderRadius: BorderRadius.circular(12),
+                            color: const Color(0xFF8A1D37).withOpacity(0.8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.touch_app_rounded,
-                          color: goldText.withOpacity(0.8),
-                          size: 16,
+                          color: goldText,
+                          size: 14,
                         ),
                       ),
                     ),

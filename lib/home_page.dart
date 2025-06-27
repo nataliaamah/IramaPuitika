@@ -75,7 +75,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     
     // More refined responsive sizing
     final double titleSize = screenWidth < 360 ? 64 : screenWidth < 400 ? 50 : 74;
-    final double subtitleSize = screenWidth < 360 ? 15 : 17;
+    final double subtitleSize = screenWidth < 360 ? 12 :15;
     final double welcomeSize = screenWidth < 360 ? 17 : 19;
 
     return Scaffold(
