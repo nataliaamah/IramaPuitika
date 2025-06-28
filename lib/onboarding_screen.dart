@@ -1254,9 +1254,9 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            primaryBackground.withOpacity(0.8),
-                            primaryBackground.withOpacity(0.5),
-                            cardBackground,
+                            const Color.fromARGB(255, 115, 161, 140).withOpacity(0.8),
+                            const Color.fromARGB(255, 76, 123, 116).withOpacity(0.5),
+                            const Color.fromARGB(255, 58, 95, 101),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,

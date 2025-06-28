@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:animate_do/animate_do.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class PantunDetailScreen extends StatefulWidget {
   final Map<String, dynamic> pantunData;
@@ -16,13 +18,16 @@ class PantunDetailScreen extends StatefulWidget {
 
 class _PantunDetailScreenState extends State<PantunDetailScreen>
     with TickerProviderStateMixin {
-
   // Theme colors
   static const Color primaryText = Color(0xFF2C3E50);
   static const Color secondaryText = Color(0xFF7F8C8D);
   static const Color accentColor = Color(0xFF3498DB);
   static const Color cardBackground = Colors.white;
   static const Color backgroundColor = Color(0xFFF8F9FA);
+
+  // API Constants
+  final String apiKey = 'AIzaSyA73OQQiAiiUH5j99t60f23dBPECr2jUWk'; // Note: It's better to store keys securely and not in source code.
+  final String endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent';
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -33,6 +38,7 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
   late Animation<double> _swayAnimation; // Declare sway animation
 
   bool _isSharePressed = false;
+  String _interpretation = 'Generating interpretation...'; // State for AI-generated interpretation
 
   // Lexicon sets for keyword coloring
   Set<String> joyKeywords = {};
@@ -43,6 +49,7 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
   void initState() {
     super.initState();
     loadAllLexicons(); // Load keywords for coloring
+    _generateInterpretation(); // Generate interpretation on screen load
 
     // Initialize animations
     _fadeController = AnimationController(
@@ -84,6 +91,81 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     // Start other animations
     _fadeController.forward();
     _slideController.forward();
+  }
+
+  // --- AI Interpretation Generation ---
+  Future<void> _generateInterpretation() async {
+    final pantun = widget.pantunData['pantun'] as String? ?? '';
+    if (pantun.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _interpretation = 'No pantun text available to interpret.';
+        });
+      }
+      return;
+    }
+
+    final String promptText = """
+You are a masterful storyteller and an expert in Malay pantun. Your task is to reveal the deep meaning of a pantun's core message (the isi) in a way that is both beautiful and easy to understand.
+
+**Instructions:**
+1.  **Focus on the Core Message:** Analyze only the isi (lines 3-4).
+2.  **Uncover Symbolism:** Gently explain the metaphors and emotional heart of the pantun.
+3.  **Be Clear and Concise:** The interpretation must be under 50 words and use language that is simple and clear for everyone.
+4.  **Evocative, Not Academic:** Write with a touch of poetry, not like a textbook.
+5.  **Just the Interpretation:** Provide only the final interpretation text, without any extra words or introductions.
+
+**Example:**
+- Pantun: "Pulau Pandan jauh ke tengah, Gunung Daik bercabang tiga; Hancur badan dikandung tanah, Budi yang baik dikenang juga."
+- Interpretation: This pantun teaches that our physical life is fleeting, but the legacy of our kindness and good character endures forever, remembered by all.
+
+**Your Task:**
+Provide an interpretation for this pantun: "$pantun"
+""";
+
+    try {
+      final response = await http.post(
+        Uri.parse('$endpoint?key=$apiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "contents": [
+            {
+              "parts": [{"text": promptText}]
+            }
+          ],
+          "generationConfig": {
+            "temperature": 0.5,
+            "topK": 32,
+            "topP": 1,
+            "maxOutputTokens": 1000,
+          }
+        }),
+      );
+
+      if (mounted) {
+        if (response.statusCode == 200) {
+          final result = jsonDecode(response.body);
+          final parts = result['candidates']?[0]['content']['parts'] as List<dynamic>? ?? [];
+          String aiResponseText = "Sorry, could not generate an interpretation at this time.";
+          if (parts.isNotEmpty && parts[0]['text'] != null) {
+            aiResponseText = parts[0]['text'].toString().trim();
+          }
+          setState(() {
+            _interpretation = aiResponseText;
+          });
+        } else {
+          setState(() {
+            _interpretation = 'Failed to get interpretation (Error ${response.statusCode}).';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _interpretation = 'Error generating interpretation. Please check your connection.';
+        });
+      }
+    }
   }
 
   // --- Lexicon Loading for Keyword Coloring ---
@@ -378,19 +460,72 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Understanding Pantun',
-            style: GoogleFonts.poppins(
-              fontSize: screenWidth * 0.045,
-              fontWeight: FontWeight.w600,
-              color: primaryText,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Interpretation',
+                style: GoogleFonts.poppins(
+                  fontSize: screenWidth * 0.045,
+                  fontWeight: FontWeight.w600,
+                  color: primaryText,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        backgroundColor: cardBackground,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        title: Text(
+                          'Disclaimer',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            color: primaryText,
+                          ),
+                        ),
+                        content: Text(
+                          'The interpretation provided is generated by an AI model and may not be entirely accurate. It should be used for informational purposes only.',
+                          style: GoogleFonts.poppins(
+                            color: secondaryText,
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            child: Text(
+                              'OK',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w600,
+                                color: accentColor,
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: Icon(
+                  Icons.info_outline_rounded,
+                  color: secondaryText,
+                  size: screenWidth * 0.05,
+                ),
+              ),
+            ],
           ),
           
           SizedBox(height: screenHeight * 0.015),
           
           Text(
-            'Pantun is a traditional Malay poetic form consisting of four-line verses with an ABAB rhyme scheme. The first two lines set up imagery or context, while the final two lines deliver the main message or moral.',
+            _interpretation,
             style: GoogleFonts.poppins(
               fontSize: screenWidth * 0.038,
               fontWeight: FontWeight.w400,
@@ -431,12 +566,12 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     if (allKeywords.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Related Themes',
+            'Related Keywords',
             style: GoogleFonts.poppins(
               fontSize: screenWidth * 0.04,
               fontWeight: FontWeight.w600,
@@ -494,7 +629,7 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
         onTapCancel: () => setState(() => _isSharePressed = false),
         onTap: () async {
           await Share.share(
-            '$pantunText\n\n✨ Shared from Irama Puitika',
+            '$pantunText\n\n✨ Get recommended pantuns using Irama Puitika',
             subject: 'Beautiful Pantun to Share',
           );
         },

@@ -58,7 +58,7 @@ class _ResultScreenState extends State<ResultScreen>
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-        backgroundColor: Color.fromARGB(255, 76, 123, 101), // Matching HomePage background
+        backgroundColor: Color.fromARGB(255, 58, 95, 101), // Matching HomePage background
         extendBodyBehindAppBar: true, // Add this line
         appBar: _buildAppBar(screenWidth),
         body: Stack(
@@ -459,8 +459,8 @@ class _ResultScreenState extends State<ResultScreen>
                           child: Text(
                             pantunText,
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.greatVibes(
-                              fontSize: screenWidth * 0.065,
+                            style: GoogleFonts.crimsonText(
+                              fontSize: screenWidth * 0.055,
                               fontWeight: FontWeight.w500,
                               color: isDimmed
                                   ? const Color.fromARGB(255, 45, 45, 45)
