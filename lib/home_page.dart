@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     return Scaffold(
       key: _pageKey,
-      backgroundColor: const Color.fromARGB(255, 63, 124, 96), // Set solid blue as background behind image
+      backgroundColor: const Color.fromARGB(255, 76, 123, 101), // Set solid blue as background behind image
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -235,7 +235,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                       style: GoogleFonts.poppins(
                                         fontSize: subtitleSize,
                                         color: goldText.withOpacity(0.95),
-                                        height: 1.6, // More generous line height
+                                        height: 1.2, // More generous line height
                                         fontWeight: FontWeight.w400,
                                         letterSpacing: 0.3,
                                       ),
@@ -320,10 +320,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: buttonColor,
                                           foregroundColor: goldText,
-                                          minimumSize: const Size(240, 56), // Slightly larger
+                                          minimumSize: const Size(240, 54), // Slightly larger
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 36, 
-                                            vertical: 18,
+                                            vertical: 8,
                                           ),
                                           shape: RoundedRectangleBorder(
                                             borderRadius: BorderRadius.circular(30),

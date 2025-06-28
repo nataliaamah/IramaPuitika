@@ -54,11 +54,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   Set<String> allEmotionKeywords = {};
 
   // Color Scheme
-  static const Color primaryBackground = Color(0xFF3F7C60);
+  static const Color primaryBackground = Color.fromARGB(255, 76, 123, 101);
   static const Color goldText = Color(0xFFEAD7A6);
   static const Color darkTealButton = Color(0xFF003E4C);
   static const Color lightGoldAccent = Color(0xFFF5EAD0);
-  static const Color cardBackground = Color(0xFF2D5F47);
+  static const Color cardBackground = Color.fromARGB(255, 38, 74, 70);
   static const Color overlayBackground = Color(0xFF1E3A2E);
 
   @override
@@ -1227,7 +1227,7 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
     }
 
     return Scaffold(
-      backgroundColor: primaryBackground,
+      backgroundColor: Color.fromARGB(255, 63, 119, 124),
       body: Stack(
         children: [
           Positioned.fill(
