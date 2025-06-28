@@ -143,47 +143,85 @@ class _ResultScreenState extends State<ResultScreen>
                           Expanded(
                             child: FadeInUp(
                               delay: const Duration(milliseconds: 400),
-                              child: CardSwiper(
-                                controller: _swiperController,
-                                cardsCount: widget.result.length,
-                                numberOfCardsDisplayed: widget.result.length < 3
-                                    ? widget.result.length
-                                    : 3,
-                                isLoop: true,
-                                backCardOffset: const Offset(0, 15),
-                                padding: EdgeInsets.only( // Use EdgeInsets.only for specific sides
-                                  left: screenWidth * 0.05,
-                                  right: screenWidth * 0.05,
-                                  top: screenHeight * 0.01, // Increase top padding
-                                  bottom: screenHeight * 0.1, // Decrease bottom padding
-                                ),
-                                onSwipe:
-                                    (prevIndex, newSwipedIndex, direction) {
-                                  if (mounted) {
-                                    setState(() {
-                                      currentIndex = newSwipedIndex ?? 0;
-                                    });
-                                  }
-                                  return true;
-                                },
-                                onUndo:
-                                    (previousIndex, originalIndex, direction) {
-                                  if (mounted) {
-                                    setState(() {
-                                      currentIndex = originalIndex;
-                                    });
-                                  }
-                                  return true;
-                                },
-                                cardBuilder:
-                                    (context, index, hThreshold, vThreshold) {
-                                  final pantunData = widget.result[index];
-                                  bool isEffectivelyFront =
-                                      index == currentIndex;
-                                  return _pantunCard(
-                                      context, pantunData, screenWidth,
-                                      isDimmed: !isEffectivelyFront);
-                                },
+                              child: Stack( // Wrap CardSwiper in a Stack
+                                children: [
+                                  CardSwiper(
+                                    controller: _swiperController,
+                                    cardsCount: widget.result.length,
+                                    numberOfCardsDisplayed: widget.result.length < 3
+                                        ? widget.result.length
+                                        : 3,
+                                    isLoop: true,
+                                    backCardOffset: const Offset(0, 15),
+                                    padding: EdgeInsets.only( // Use EdgeInsets.only for specific sides
+                                      left: screenWidth * 0.05,
+                                      right: screenWidth * 0.05,
+                                      top: screenHeight * 0.01, // Increase top padding
+                                      bottom: screenHeight * 0.1, // Decrease bottom padding
+                                    ),
+                                    onSwipe:
+                                        (prevIndex, newSwipedIndex, direction) {
+                                      if (mounted) {
+                                        setState(() {
+                                          currentIndex = newSwipedIndex ?? 0;
+                                        });
+                                      }
+                                      return true;
+                                    },
+                                    onUndo:
+                                        (previousIndex, originalIndex, direction) {
+                                      if (mounted) {
+                                        setState(() {
+                                          currentIndex = originalIndex;
+                                        });
+                                      }
+                                      return true;
+                                    },
+                                    cardBuilder:
+                                        (context, index, hThreshold, vThreshold) {
+                                      final pantunData = widget.result[index];
+                                      bool isEffectivelyFront =
+                                          index == currentIndex;
+                                      return _pantunCard(
+                                          context, pantunData, screenWidth,
+                                          isDimmed: !isEffectivelyFront);
+                                    },
+                                  ),
+                                  // Left Arrow Indicator (positioned over the card)
+                                  if (widget.result.length > 1) // Only show if more than one card
+                                    Positioned(
+                                      left: screenWidth * 0.025, // Align with card left padding
+                                      top: 0, // Position from top of the stack
+                                      bottom: 60, // Position from bottom of the stack
+                                      child: Center( // Center vertically within the positioned area
+                                        child: IconButton(
+                                          icon: Icon(Icons.arrow_back_ios,
+                                              color: const Color.fromARGB(255, 26, 26, 26).withOpacity(0.7), // Use goldText with opacity
+                                              size: screenWidth * 0.05), // Adjust size
+                                          onPressed: () {
+                                            _swiperController.undo(); // Use undo for back navigation
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  // Right Arrow Indicator (positioned over the card)
+                                  if (widget.result.length > 1) // Only show if more than one card
+                                    Positioned(
+                                      right: screenWidth * 0.01, // Align with card right padding
+                                      top: 0, // Position from top of the stack
+                                      bottom: 60, // Position from bottom of the stack
+                                      child: Center( // Center vertically within the positioned area
+                                        child: IconButton(
+                                          icon: Icon(Icons.arrow_forward_ios,
+                                              color: const Color.fromARGB(255, 26, 26, 26).withOpacity(0.7), // Use goldText with opacity
+                                              size: screenWidth * 0.05), // Adjust size
+                                          onPressed: () {
+                                            _swiperController.swipe(CardSwiperDirection.right); // Use swipe for next navigation
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                           ),

@@ -186,7 +186,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
         setState(() {
           _selectedImage = File(pickedFile.path);
           _keywords = 'Analyzing image...'; // Keep this initial text
-          _isScenery = false;
+          _isScenery = false; // Reset scenery status
         });
         _setLoading(true, task: 'image'); // <-- Set task to 'image'
         await _uploadAndAnalyzeImage();
@@ -194,6 +194,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     } catch (e) {
       setState(() {
         _keywords = "Could not select image. Please try again.";
+        _isScenery = false; // Ensure scenery is false on error
       });
       _setLoading(false); // <-- Clear task on error
       if (mounted) {
@@ -214,14 +215,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
           _keywords = 'No image selected.';
         });
       }
-      _setLoading(false); // <-- Clear task on early exit
+      _setLoading(false); // Clear task on early exit
       return;
     }
     if (_selectedEmotion == null) {
       setState(() {
         _keywords = 'Please select an emotion before uploading an image.';
       });
-      _setLoading(false); // <-- Clear task on early exit
+      _setLoading(false); // Clear task on early exit
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -232,6 +233,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       }
       return;
     }
+
+    // Loading is already set to 'image' task in _pickImage
+
     try {
       final imageBytes = await _selectedImage!.readAsBytes();
       final base64Image = base64Encode(imageBytes);
@@ -311,6 +315,7 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
             _keywords = _invalidSceneryErrorMessage;
             _isScenery = false;
           });
+          if (mounted) _setLoading(false); // Clear loading on invalid scenery
         } else {
           List<String> extractedWords = parts
               .where((part) => part['text'] != null)
@@ -333,32 +338,41 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
             _keywords = extractedWords.isNotEmpty
                 ? extractedWords.join(", ")
                 : "Could not extract specific keywords for the selected emotion. Feel free to choose an emotion!";
-            _isScenery = (aiResponseText != _invalidSceneryErrorMessage);
+            _isScenery = extractedWords.isNotEmpty; // Scenery is valid if keywords were extracted
           });
 
           if (extractedWords.isNotEmpty) {
-            _isScenery = true;
+            // Analysis successful and keywords extracted, proceed to fetch pantun
+            // _setLoading(false); // No need to clear here, next call sets its own loading
+            await _fetchPantunRecommendations(); // This handles setting loading to 'pantun' and clearing it
+          } else {
+            // Analysis successful but no relevant keywords found
+            if (mounted) _setLoading(false); // Clear loading
           }
         }
       } else {
+        // API call failed
         setState(() {
           _keywords = "Sorry, image analysis failed (Error ${response.statusCode}). Please try again.";
           _isScenery = false;
         });
+        if (mounted) _setLoading(false); // Clear loading on API error
       }
     } catch (e) {
+      // Exception during analysis
       setState(() {
         _keywords = 'Error analyzing image. Check connection or try another image.';
         _isScenery = false;
       });
-    } finally {
-      if (mounted) _setLoading(false); // <-- Clear task in finally block
+      if (mounted) _setLoading(false); // Clear task on exception
     }
+    // Removed the finally block as loading is now managed within the try block based on success/failure
   }
 
   // --- Pantun Recommendation ---
   Future<void> _fetchPantunRecommendations() async {
     String? errorMessage;
+    // Keep initial checks for emotion/scenery status, although _uploadAndAnalyzeImage should prevent calling if not ready
     if (_selectedEmotion == null && !_isScenery) {
       errorMessage = 'Please upload a valid scenery image and select an emotion.';
     } else if (_selectedEmotion == null) {
@@ -367,44 +381,39 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
       errorMessage = 'Please upload a valid scenery image. The previous image was not suitable or analysis failed.';
     }
 
-    if (errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage, style: GoogleFonts.poppins(color: Colors.white)),
-          backgroundColor: Colors.orangeAccent,
-        ),
-      );
-      return;
-    }
+    // Check if keywords are actually available and valid before proceeding
+    final imageKeywordsList = _keywords.split(', ').map((word) => word.trim()).where((word) => word.isNotEmpty).toList();
+    bool keywordsAreValid = imageKeywordsList.isNotEmpty &&
+                            _keywords != _invalidSceneryErrorMessage &&
+                            !_keywords.startsWith("Could not extract specific keywords") &&
+                            !_keywords.contains("Analyzing") &&
+                            !_keywords.startsWith("Upload an image");
 
-    if (_keywords.startsWith('Upload an image') || _keywords.contains('Analyzing image...')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Image analysis may not be complete or no image was processed successfully.',
-            style: GoogleFonts.poppins(color: Colors.white),
+
+    if (errorMessage != null || !keywordsAreValid) {
+      // If there's an error message or no valid keywords, show a snackbar and stop.
+      // This is a safeguard; ideally, _uploadAndAnalyzeImage only calls this when keywords are valid.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage ?? 'No valid keywords available for pantun generation.', style: GoogleFonts.poppins(color: Colors.white)),
+            backgroundColor: Colors.orangeAccent,
           ),
-          backgroundColor: Colors.orangeAccent,
-        ),
-      );
+        );
+        _setLoading(false); // Ensure loading is off if we exit early
+      }
       return;
     }
 
     _setLoading(true, task: 'pantun'); // <-- Set task to 'pantun'
     try {
-      final imageKeywordsList = _keywords.split(', ').map((word) => word.trim()).where((word) => word.isNotEmpty).toList();
-
       var response = await http.post(
         Uri.parse(flaskApiUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "emotion": _selectedEmotion,
-          "image_keywords": (_keywords == _invalidSceneryErrorMessage ||
-                  _keywords.startsWith("Could not extract specific keywords") ||
-                  _keywords.contains("Analyzing") ||
-                  _keywords.startsWith("Upload an image"))
-              ? []
-              : imageKeywordsList
+          // Pass the actual extracted keywords list
+          "image_keywords": imageKeywordsList
         }),
       );
 
@@ -412,12 +421,25 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
         if (response.statusCode == 200) {
           var data = jsonDecode(response.body);
           List<Map<String, dynamic>> pantunResults = List<Map<String, dynamic>>.from(data['pantuns']);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ResultScreen(result: pantunResults),
-            ),
-          );
+          // Only navigate if results are not empty
+          if (pantunResults.isNotEmpty) {
+             Navigator.push(
+               context,
+               MaterialPageRoute(
+                 builder: (context) => ResultScreen(result: pantunResults),
+               ),
+             );
+          } else {
+             ScaffoldMessenger.of(context).showSnackBar(
+               SnackBar(
+                 content: Text(
+                   "No pantun recommendations found for the selected criteria.",
+                   style: GoogleFonts.poppins(color: Colors.white),
+                 ),
+                 backgroundColor: Colors.orangeAccent,
+               ),
+             );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -443,7 +465,8 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
         );
       }
     } finally {
-      if (mounted) _setLoading(false); // <-- Clear task in finally block
+      // This finally block will always run after try/catch in _fetchPantunRecommendations
+      if (mounted) _setLoading(false); // <-- Clear task when pantun fetching is done (success or failure)
     }
   }
 
@@ -518,11 +541,11 @@ You are an AI image analysis assistant for a Pantun Recommender System. Your tas
   Color _emotionAccentColor(String emotion) {
   switch (emotion) {
     case 'Happy':
-      return const Color.fromARGB(255, 218, 165, 32); // Warm golden yellow
+      return const Color.fromARGB(255, 218, 165, 32); // Warm golden yellow (Psychology: Joy, Theme: Gold)
     case 'Angry':
-      return const Color.fromARGB(255, 205, 92, 92); // Softer coral-red
+      return const Color.fromARGB(255, 190, 50, 50); // Slightly deeper, muted red (Psychology: Anger, Theme: Earthy tones)
     case 'Sad':
-      return const Color.fromARGB(255, 95, 158, 160); // Muted teal-blue
+      return const Color.fromARGB(255, 80, 100, 150); // Deeper, muted blue (Psychology: Sadness, Theme: Complements teal)
     default:
       return goldText;
   }
@@ -533,9 +556,9 @@ Color _emotionBorderColor(String emotion) {
     case 'Happy':
       return const Color.fromARGB(255, 184, 134, 11); // Deeper gold
     case 'Angry':
-      return const Color.fromARGB(255, 169, 69, 69); // Deeper coral
+      return const Color.fromARGB(255, 150, 40, 40); // Deeper red border
     case 'Sad':
-      return const Color.fromARGB(255, 69, 128, 130); // Deeper teal
+      return const Color.fromARGB(255, 60, 80, 120); // Deeper blue border
     default:
       return goldText;
   }
@@ -548,11 +571,13 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
   final double fontSize = textFs ?? (screenWidth * 0.045);
   final Color accent = _emotionAccentColor(emotion);
   final Color border = _emotionBorderColor(emotion);
-  
+
   return GestureDetector(
     onTap: _isLoading ? null : () {
       setState(() {
-        _selectedEmotion = emotion;
+        // If the tapped emotion is already selected, deselect it (set to null)
+        // Otherwise, select the tapped emotion
+        _selectedEmotion = isSelected ? null : emotion;
       });
     },
     child: Opacity(
@@ -561,13 +586,13 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
         width: buttonSize,
         padding: EdgeInsets.symmetric(vertical: screenHeight * 0.03, horizontal: screenWidth * 0.03),
         decoration: BoxDecoration(
-          color: isSelected 
-            ? accent.withOpacity(0.85) 
+          color: isSelected
+            ? accent.withOpacity(0.85)
             : const Color.fromARGB(255, 76, 111, 105).withOpacity(0.3), // Warmer dark green instead of black
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected 
-              ? border 
+            color: isSelected
+              ? border
               : const Color.fromARGB(255, 218, 165, 32).withOpacity(0.6), // Warm gold border instead of goldText
             width: isSelected ? 2.2 : 1.5,
           ),
@@ -596,8 +621,8 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
               width: buttonSize * 0.5,
               height: buttonSize * 0.5,
               errorBuilder: (context, error, stackTrace) => Icon(
-                Icons.sentiment_neutral, 
-                size: buttonSize * 0.5, 
+                Icons.sentiment_neutral,
+                size: buttonSize * 0.5,
                 color: isSelected ? Colors.white : const Color.fromARGB(255, 218, 165, 32),
               ),
             ),
@@ -704,7 +729,7 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
               ),
             ),
           ),
-          SizedBox(height: screenHeight * 0.20),
+          SizedBox(height: screenHeight * 0.18),
           // --- Adaptive spacing and popup above the Continue button ---
           LayoutBuilder(
             builder: (context, constraints) {
@@ -825,7 +850,7 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
     child: Column(
       children: [
         SizedBox(height: screenHeight * 0.06),
-        
+
         // Header section matching emotion selection screen
         FadeInDown(
           delay: const Duration(milliseconds: 200),
@@ -859,9 +884,9 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
             ],
           ),
         ),
-        
+
         SizedBox(height: screenHeight * 0.02),
-        
+
         // Subtitle matching the emotion selection screen
         FadeInDown(
           delay: const Duration(milliseconds: 400),
@@ -876,9 +901,9 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
             ),
           ),
         ),
-        
+
         SizedBox(height: screenHeight * 0.08),
-        
+
         // Image upload container with consistent styling
         FadeInUp(
           delay: const Duration(milliseconds: 600),
@@ -954,11 +979,11 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                                           ),
                                           child: Column(
                                             children: [
-                                              Icon(Icons.photo_library, 
-                                                   size: screenWidth * 0.08, 
+                                              Icon(Icons.photo_library,
+                                                   size: screenWidth * 0.08,
                                                    color: goldText),
                                               SizedBox(height: screenHeight * 0.01),
-                                              Text('Gallery', 
+                                              Text('Gallery',
                                                    style: GoogleFonts.poppins(
                                                      color: goldText,
                                                      fontSize: screenWidth * 0.04,
@@ -988,11 +1013,11 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                                           ),
                                           child: Column(
                                             children: [
-                                              Icon(Icons.camera_alt, 
-                                                   size: screenWidth * 0.08, 
+                                              Icon(Icons.camera_alt,
+                                                   size: screenWidth * 0.08,
                                                    color: goldText),
                                               SizedBox(height: screenHeight * 0.01),
-                                              Text('Camera', 
+                                              Text('Camera',
                                                    style: GoogleFonts.poppins(
                                                      color: goldText,
                                                      fontSize: screenWidth * 0.04,
@@ -1023,7 +1048,7 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                       color: Colors.black.withOpacity(0.25),
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(
-                        color: goldText.withOpacity(0.5), 
+                        color: goldText.withOpacity(0.5),
                         width: 1.5
                       ),
                     ),
@@ -1031,9 +1056,9 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(13),
                             child: Image.file(
-                              _selectedImage!, 
-                              fit: BoxFit.cover, 
-                              width: double.infinity, 
+                              _selectedImage!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
                               height: double.infinity
                             ),
                           )
@@ -1069,21 +1094,21 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                           ),
                   ),
                 ),
-                
+
                 SizedBox(height: screenHeight * 0.02),
-                
+
                 // Keywords or error display
                 if (showSceneryError)
                   Container(
                     padding: EdgeInsets.symmetric(
-                      vertical: screenHeight * 0.015, 
+                      vertical: screenHeight * 0.015,
                       horizontal: screenWidth * 0.04
                     ),
                     decoration: BoxDecoration(
                       color: Colors.redAccent.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.redAccent.withOpacity(0.6), 
+                        color: Colors.redAccent.withOpacity(0.6),
                         width: 1
                       ),
                     ),
@@ -1099,8 +1124,8 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                           child: Text(
                             _keywords,
                             style: GoogleFonts.poppins(
-                              color: Colors.red.shade300, 
-                              fontSize: screenWidth * 0.038, 
+                              color: Colors.red.shade300,
+                              fontSize: screenWidth * 0.038,
                               fontWeight: FontWeight.w500
                             ),
                           ),
@@ -1108,21 +1133,21 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                       ],
                     ),
                   )
-                else if (_selectedImage != null && 
-                         !_isLoading && 
-                         _keywords != 'Analyzing image...' && 
-                         _keywords != _invalidSceneryErrorMessage && 
+                else if (_selectedImage != null &&
+                         !_isLoading &&
+                         _keywords != 'Analyzing image...' &&
+                         _keywords != _invalidSceneryErrorMessage &&
                          !_keywords.startsWith("Upload an image"))
                   Container(
                     padding: EdgeInsets.symmetric(
-                      vertical: screenHeight * 0.015, 
+                      vertical: screenHeight * 0.015,
                       horizontal: screenWidth * 0.04
                     ),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Colors.green.withOpacity(0.4), 
+                        color: Colors.green.withOpacity(0.4),
                         width: 1
                       ),
                     ),
@@ -1138,8 +1163,8 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
                           child: Text(
                             "Keywords: $_keywords",
                             style: GoogleFonts.poppins(
-                              color: Colors.green.shade300, 
-                              fontSize: screenWidth * 0.038, 
+                              color: Colors.green.shade300,
+                              fontSize: screenWidth * 0.038,
                               fontWeight: FontWeight.w500
                             ),
                           ),
@@ -1151,55 +1176,37 @@ Widget _emotionButton(String emotion, String assetPath, double screenWidth, doub
             ),
           ),
         ),
-        
-        SizedBox(height: screenHeight * 0.12),
-        
+
+        SizedBox(height: screenHeight * 0.10), // Adjusted spacing
+
         // Buttons section with consistent spacing
         LayoutBuilder(
           builder: (context, constraints) {
-            final double buttonAreaHeight = screenHeight * 0.2;
+            // Removed the fixed buttonAreaHeight as the Generate Pantun button is gone
             return Column(
               children: [
-                SizedBox(
-                  height: buttonAreaHeight,
-                  child: Column(
-                    children: [
-                      _buildStyledButton(
-                        text: 'Generate Pantun',
-                        onPressed: _selectedImage != null && !_isLoading && _isScenery
-                            ? () {
-                                HapticFeedback.lightImpact();
-                                _fetchPantunRecommendations();
-                              }
-                            : null,
-                        isPrimary: true,
-                        screenWidth: screenWidth,
-                        screenHeight: screenHeight,
-                      ),
-                      SizedBox(height: screenHeight * 0.01),
-                      GestureDetector(
-                        onTap: _isLoading
-                            ? null
-                            : () {
-                                HapticFeedback.lightImpact();
-                                _pageController.previousPage(
-                                  duration: const Duration(milliseconds: 400),
-                                  curve: Curves.easeInOut,
-                                );
-                              },
-                        child: Text(
-                          'Go Back',
-                          style: GoogleFonts.poppins(
-                            fontSize: screenWidth * 0.045,
-                            color: _isLoading ? goldText.withOpacity(0.5) : goldText,
-                            decoration: TextDecoration.underline,
-                            decorationColor: goldText,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
+                // Removed the _buildStyledButton for 'Generate Pantun'
+                // SizedBox(height: screenHeight * 0.01), // Removed spacing below the removed button
+                GestureDetector(
+                  onTap: _isLoading
+                      ? null
+                      : () {
+                          HapticFeedback.lightImpact();
+                          _pageController.previousPage(
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                  child: Text(
+                    'Go Back',
+                    style: GoogleFonts.poppins(
+                      fontSize: screenWidth * 0.045,
+                      color: _isLoading ? goldText.withOpacity(0.5) : goldText,
+                      decoration: TextDecoration.underline,
+                      decorationColor: goldText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ],

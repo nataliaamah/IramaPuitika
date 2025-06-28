@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:animate_do/animate_do.dart';
 
 class PantunDetailScreen extends StatefulWidget {
   final Map<String, dynamic> pantunData;
@@ -11,61 +13,77 @@ class PantunDetailScreen extends StatefulWidget {
   State<PantunDetailScreen> createState() => _PantunDetailScreenState();
 }
 
-class _PantunDetailScreenState extends State<PantunDetailScreen> 
-    with SingleTickerProviderStateMixin {
-  
-  // IMPROVED: Enhanced color scheme with better contrast
-  static const Color goldText = Color(0xFFE6C68A);
-  static const Color lightGold = Color(0xFFF2E5C7);
-  static const Color darkTealButton = Color(0xFF004D40);
-  static const Color accentColor = Color(0xFF6B4E3D);
-  
-  // IMPROVED: More sophisticated gradient
-  static const LinearGradient backgroundGradient = LinearGradient(
-    colors: [
-      Color(0xFF8A1D37), 
-      Color(0xFFAB5D5D),
-      Color(0xFF7A2B3F),
-    ],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    stops: [0.0, 0.6, 1.0],
-  );
+class _PantunDetailScreenState extends State<PantunDetailScreen>
+    with TickerProviderStateMixin {
 
-  late AnimationController _animationController;
+  // Theme colors
+  static const Color primaryText = Color(0xFF2C3E50);
+  static const Color secondaryText = Color(0xFF7F8C8D);
+  static const Color accentColor = Color(0xFF3498DB);
+  static const Color cardBackground = Colors.white;
+  static const Color backgroundColor = Color(0xFFF8F9FA);
+
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late AnimationController _swayController; // Add sway controller
+
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  late Animation<double> _swayAnimation; // Declare sway animation
+
+  bool _isSharePressed = false;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+
+    // Initialize animations
+    _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _swayController = AnimationController( // Initialize sway controller
+      duration: const Duration(seconds: 8), // Match home page duration
+      vsync: this,
+    ); // Initialize controller first
+
+    _swayAnimation = Tween<double>(begin: -0.003, end: 0.003).animate( // Initialize sway animation
+      CurvedAnimation(parent: _swayController, curve: Curves.easeInOut),
+    );
+
+    // Now start the repeat after the animation is initialized
+    _swayController.repeat(reverse: true);
+
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
+    );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
     ));
 
-    _animationController.forward();
+
+    // Start other animations
+    _fadeController.forward();
+    _slideController.forward();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    _swayController.dispose(); // Dispose sway controller
     super.dispose();
   }
 
@@ -73,7 +91,6 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final EdgeInsets systemPadding = MediaQuery.of(context).padding;
 
     String pantunText = widget.pantunData['pantun'] as String? ?? 'No pantun available';
     pantunText = pantunText.replaceAll('\\r\\n', '\n')
@@ -83,287 +100,224 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     pantunText = pantunText.replaceAll(RegExp(r';\s+'), ';\n');
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(screenWidth),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(gradient: backgroundGradient),
-        child: Stack(
-          children: [
-            // IMPROVED: Decorative background elements
-            _buildBackgroundDecorations(screenWidth, screenHeight),
-            
-            // Main content
-            FadeTransition(
+      backgroundColor: backgroundColor, // This is the fallback color if the image doesn't load
+      appBar: _buildAppBar(),
+      body: Stack(
+        children: [
+          // Batik pattern background
+          _buildBatikBackground(),
+
+          // Batik element top right
+          Positioned(
+            top: -screenHeight * 0.1, // Adjust position as needed
+            right: -screenWidth * 0.3, // Adjust position as needed
+            child: FadeInRight( // Use FadeInRight for entry animation
+              delay: const Duration(milliseconds: 300), // Match or adjust delay
+              duration: const Duration(milliseconds: 800), // Match or adjust duration
+              child: RotationTransition(
+                turns: _swayAnimation, // Use the sway animation
+                child: Image.asset(
+                  'assets/images/batik_element_top_right.png',
+                  width: screenWidth * 0.8, // Adjust size as needed
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(width: screenWidth * 0.4, height: screenWidth * 0.35, color: Colors.transparent), // Placeholder
+                ),
+              ),
+            ),
+          ),
+
+          // Batik element bottom left
+          Positioned(
+            bottom: -screenHeight * 0.1, // Adjust position as needed
+            left: -screenWidth * 0.3, // Adjust position as needed
+            child: FadeInLeft( // Use FadeInLeft for entry animation
+              delay: const Duration(milliseconds: 300), // Match or adjust delay
+              duration: const Duration(milliseconds: 800), // Match or adjust duration
+              child: RotationTransition(
+                turns: _swayAnimation, // Use the sway animation
+                child: Image.asset(
+                  'assets/images/batik_element_bottom_left.png',
+                  width: screenWidth * 0.8, // Adjust size as needed
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Container(width: screenWidth * 0.45, height: screenWidth * 0.4, color: Colors.transparent), // Placeholder
+                ),
+              ),
+            ),
+          ),
+
+          // Main content
+          SafeArea(
+            child: FadeTransition(
               opacity: _fadeAnimation,
               child: SlideTransition(
                 position: _slideAnimation,
                 child: SingleChildScrollView(
-                  padding: EdgeInsets.only(
-                    top: systemPadding.top + kToolbarHeight + (screenHeight * 0.02),
-                    left: screenWidth * 0.05,
-                    right: screenWidth * 0.05,
-                    bottom: screenHeight * 0.03,
-                  ),
+                  physics: const BouncingScrollPhysics(),
+                  padding: EdgeInsets.all(screenWidth * 0.05),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      _buildHeader(screenWidth, screenHeight),
-                      _buildPantunCard(pantunText, screenWidth, screenHeight),
-                      _buildTagsSection(screenWidth, screenHeight),
-                      _buildActionSection(screenWidth, screenHeight),
+                      SizedBox(height: screenHeight * 0.02),
+                      
+                      // Main content card
+                      _buildMainContentCard(pantunText, screenWidth, screenHeight),
+                      
+                      SizedBox(height: screenHeight * 0.03),
+                      
+                      // Share button
+                      _buildShareButton(pantunText, screenWidth, screenHeight),
+                      
+                      SizedBox(height: screenHeight * 0.03),
                     ],
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  // IMPROVED: Enhanced app bar with better styling
-  PreferredSizeWidget _buildAppBar(double screenWidth) {
+  PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      centerTitle: true,
-      iconTheme: const IconThemeData(color: goldText),
-      leading: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Container(
+      leading: Container(
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: primaryText, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      actions: [
+        Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: goldText.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: const Icon(
-            Icons.arrow_back_rounded,
-            color: goldText,
-            size: 22,
-          ),
-        ),
-      ),
-      title: Text(
-        "Pantun Details",
-        style: GoogleFonts.playfairDisplay(
-          fontSize: screenWidth * 0.05,
-          fontWeight: FontWeight.w500,
-          color: goldText,
-          fontStyle: FontStyle.italic,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-
-  // IMPROVED: Decorative background elements
-  Widget _buildBackgroundDecorations(double screenWidth, double screenHeight) {
-    return Stack(
-      children: [
-        // Floating decorative elements
-        Positioned(
-          top: screenHeight * 0.15,
-          right: -screenWidth * 0.1,
-          child: Opacity(
-            opacity: 0.1,
-            child: Container(
-              width: screenWidth * 0.4,
-              height: screenWidth * 0.4,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: goldText, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-            ),
+            ],
           ),
-        ),
-        Positioned(
-          bottom: screenHeight * 0.2,
-          left: -screenWidth * 0.15,
-          child: Opacity(
-            opacity: 0.08,
-            child: Container(
-              width: screenWidth * 0.5,
-              height: screenWidth * 0.5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: lightGold, width: 1),
-              ),
-            ),
+          child: IconButton(
+            icon: const Icon(Icons.more_horiz, color: primaryText, size: 20),
+            onPressed: () {},
           ),
         ),
       ],
     );
   }
 
-  // IMPROVED: Better header section with visual hierarchy
-  Widget _buildHeader(double screenWidth, double screenHeight) {
+  Widget _buildBatikBackground() {
     return Container(
-      margin: EdgeInsets.only(bottom: screenHeight * 0.03),
-      child: Column(
-        children: [
-          // IMPROVED: Better icon presentation
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(
-                color: goldText.withOpacity(0.3),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: Image.asset(
-              'assets/images/pantun.png',
-              height: screenHeight * 0.12,
-              width: screenWidth * 0.3,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => Icon(
-                Icons.auto_awesome,
-                size: screenWidth * 0.15,
-                color: goldText.withOpacity(0.7),
-              ),
-            ),
-          ),
-          
-          SizedBox(height: screenHeight * 0.02),
-          
-          // IMPROVED: Better subtitle
-          Text(
-            "Traditional Malay Poetry",
-            style: GoogleFonts.poppins(
-              fontSize: screenWidth * 0.035,
-              fontStyle: FontStyle.italic,
-              color: goldText.withOpacity(0.8),
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
+      decoration: const BoxDecoration(
+        color: const Color.fromARGB(255, 76, 123, 101),
+      ),
+      child: Image.asset( // Use Image.asset for the background image
+        'assets/images/background.png', // Path to your background image
+        fit: BoxFit.cover, // Cover the entire container
+        width: double.infinity,
+        height: double.infinity,
       ),
     );
   }
 
-  // IMPROVED: Enhanced pantun card with better design
-  Widget _buildPantunCard(String pantunText, double screenWidth, double screenHeight) {
-    return Container(
-      margin: EdgeInsets.only(bottom: screenHeight * 0.04),
-      padding: EdgeInsets.all(screenWidth * 0.08),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(
-          color: goldText.withOpacity(0.2),
-          width: 1,
+  Widget _buildMainContentCard(String pantunText, double screenWidth, double screenHeight) {
+    return FadeInUp(
+      delay: const Duration(milliseconds: 300),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: cardBackground,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 40,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header with trending badge
+            _buildCardHeader(screenWidth),
+            
+            // Pantun text section
+            _buildPantunSection(pantunText, screenWidth, screenHeight),
+            
+            // Separator line
+            _buildSeparator(screenWidth),
+            
+            // Definition section
+            _buildDefinitionSection(screenWidth, screenHeight),
+            
+            // Keywords section
+            _buildKeywordsSection(screenWidth, screenHeight),
+            
+            SizedBox(height: screenHeight * 0.02),
+          ],
         ),
       ),
-      child: Column(
+    );
+  }
+
+  Widget _buildCardHeader(double screenWidth) {
+    return Container(
+      padding: EdgeInsets.all(screenWidth * 0.05),
+      child: Row(
         children: [
-          // IMPROVED: Decorative header for the pantun
           Container(
-            margin: const EdgeInsets.only(bottom: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: accentColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Container(
-                    height: 1,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          accentColor.withOpacity(0.5),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    color: accentColor.withOpacity(0.6),
-                    size: 20,
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                    height: 1,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          accentColor.withOpacity(0.5),
-                          Colors.transparent,
-                        ],
-                      ),
-                    ),
+                const Icon(Icons.trending_up, color: Colors.white, size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  'Traditional',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: screenWidth * 0.03,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-          
-          // IMPROVED: Better text styling
+          const Spacer(),
           Text(
-            pantunText,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.playfairDisplay(
-              fontSize: screenWidth * 0.052,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF2D2D2D),
-              height: 1.6,
-              letterSpacing: 0.3,
-            ),
-          ),
-          
-          // IMPROVED: Decorative footer
-          Container(
-            margin: const EdgeInsets.only(top: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 40,
-                  height: 1,
-                  color: accentColor.withOpacity(0.5),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: accentColor.withOpacity(0.6),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-                Container(
-                  width: 40,
-                  height: 1,
-                  color: accentColor.withOpacity(0.5),
-                ),
-              ],
+            '2 Days Ago',
+            style: GoogleFonts.poppins(
+              color: secondaryText,
+              fontSize: screenWidth * 0.032,
+              fontWeight: FontWeight.w400,
             ),
           ),
         ],
@@ -371,285 +325,282 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     );
   }
 
-  // IMPROVED: Better tags section with enhanced styling
-  Widget _buildTagsSection(double screenWidth, double screenHeight) {
-    List<Widget> chipWidgets = [];
+  Widget _buildPantunSection(String pantunText, double screenWidth, double screenHeight) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.06,
+        vertical: screenHeight * 0.02,
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Beautiful Traditional Pantun',
+            style: GoogleFonts.poppins(
+              fontSize: screenWidth * 0.055,
+              fontWeight: FontWeight.w700,
+              color: primaryText,
+              height: 1.3,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          
+          SizedBox(height: screenHeight * 0.025),
+          
+          // Pantun text with quote styling
+          Container(
+            padding: EdgeInsets.all(screenWidth * 0.04),
+            decoration: BoxDecoration(
+              color: backgroundColor.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: accentColor.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Text(
+              '"$pantunText"',
+              style: GoogleFonts.crimsonText(
+                fontSize: screenWidth * 0.045,
+                fontWeight: FontWeight.w500,
+                color: primaryText,
+                height: 1.6,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeparator(double screenWidth) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+      height: 1,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.transparent,
+            secondaryText.withOpacity(0.3),
+            Colors.transparent,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDefinitionSection(double screenWidth, double screenHeight) {
+    return Container(
+      padding: EdgeInsets.all(screenWidth * 0.06),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Understanding Pantun',
+            style: GoogleFonts.poppins(
+              fontSize: screenWidth * 0.045,
+              fontWeight: FontWeight.w600,
+              color: primaryText,
+            ),
+          ),
+          
+          SizedBox(height: screenHeight * 0.015),
+          
+          Text(
+            'Pantun is a traditional Malay poetic form consisting of four-line verses with an ABAB rhyme scheme. The first two lines set up imagery or context, while the final two lines deliver the main message or moral.',
+            style: GoogleFonts.poppins(
+              fontSize: screenWidth * 0.038,
+              fontWeight: FontWeight.w400,
+              color: secondaryText,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKeywordsSection(double screenWidth, double screenHeight) {
+    List<String> allKeywords = [];
+    
+    // Process keywords and emotions
     final keywordsData = widget.pantunData['keywords'];
     final emotionData = widget.pantunData['emotion'];
 
-    // Process keywords
     if (keywordsData != null) {
-      List<dynamic> keywordsList = [];
-      if (keywordsData is List) {
-        keywordsList = keywordsData;
-      } else if (keywordsData is String && keywordsData.isNotEmpty) {
-        keywordsList = [keywordsData];
-      }
-      
+      List<dynamic> keywordsList = keywordsData is List ? keywordsData : [keywordsData];
       for (var keyword in keywordsList) {
         if (keyword.toString().isNotEmpty) {
-          chipWidgets.add(_buildEnhancedChip(
-            keyword.toString(), 
-            screenWidth, 
-            isEmotion: false
-          ));
+          allKeywords.add(keyword.toString());
         }
       }
     }
 
-    // Process emotions
     if (emotionData != null) {
-      List<dynamic> emotionList = [];
-      if (emotionData is List) {
-        emotionList = emotionData;
-      } else if (emotionData is String && emotionData.isNotEmpty) {
-        emotionList = [emotionData];
-      }
-
+      List<dynamic> emotionList = emotionData is List ? emotionData : [emotionData];
       for (var emotion in emotionList) {
         if (emotion.toString().isNotEmpty) {
-          chipWidgets.add(_buildEnhancedChip(
-            emotion.toString(), 
-            screenWidth, 
-            isEmotion: true
-          ));
+          allKeywords.add(emotion.toString());
         }
       }
     }
 
-    if (chipWidgets.isEmpty) return const SizedBox.shrink();
+    if (allKeywords.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      margin: EdgeInsets.only(bottom: screenHeight * 0.04),
-      padding: EdgeInsets.all(screenWidth * 0.06),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Related Themes',
+            style: GoogleFonts.poppins(
+              fontSize: screenWidth * 0.04,
+              fontWeight: FontWeight.w600,
+              color: primaryText,
+            ),
+          ),
+          
+          SizedBox(height: screenHeight * 0.015),
+          
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: allKeywords.map((keyword) => _buildKeywordChip(keyword, screenWidth)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKeywordChip(String keyword, double screenWidth) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.03,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
+        color: accentColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: goldText.withOpacity(0.3),
+          color: accentColor.withOpacity(0.3),
           width: 1,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            "Associated with",
-            style: GoogleFonts.poppins(
-              color: goldText,
-              fontSize: screenWidth * 0.04,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-          SizedBox(height: screenHeight * 0.02),
-          Wrap(
-            spacing: 12.0,
-            runSpacing: 10.0,
-            alignment: WrapAlignment.center,
-            children: chipWidgets,
-          ),
-        ],
+      child: Text(
+        keyword,
+        style: GoogleFonts.poppins(
+          fontSize: screenWidth * 0.032,
+          fontWeight: FontWeight.w500,
+          color: accentColor.withOpacity(0.8),
+        ),
       ),
     );
   }
 
-  // IMPROVED: Enhanced chip design
-  Widget _buildEnhancedChip(String text, double screenWidth, {bool isEmotion = false}) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.04,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: isEmotion 
-            ? accentColor.withOpacity(0.2)
-            : goldText.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isEmotion 
-              ? accentColor.withOpacity(0.6)
-              : goldText.withOpacity(0.6),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isEmotion ? Icons.favorite_outline : Icons.tag,
-            size: 14,
-            color: isEmotion ? accentColor : goldText,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: GoogleFonts.poppins(
-              color: isEmotion ? accentColor : goldText,
-              fontSize: screenWidth * 0.033,
-              fontWeight: FontWeight.w500,
+  Widget _buildShareButton(String pantunText, double screenWidth, double screenHeight) {
+    return FadeInUp(
+      delay: const Duration(milliseconds: 500),
+      child: GestureDetector(
+        onTapDown: (_) {
+          setState(() => _isSharePressed = true);
+          HapticFeedback.lightImpact();
+        },
+        onTapUp: (_) => setState(() => _isSharePressed = false),
+        onTapCancel: () => setState(() => _isSharePressed = false),
+        onTap: () async {
+          await Share.share(
+            '$pantunText\n\n✨ Shared from Irama Puitika',
+            subject: 'Beautiful Pantun to Share',
+          );
+        },
+        child: AnimatedScale(
+          scale: _isSharePressed ? 0.96 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
+              vertical: screenHeight * 0.018,
+              horizontal: screenWidth * 0.06,
+            ),
+            decoration: BoxDecoration(
+              color: accentColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: accentColor.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.share,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Share this Pantun',
+                  style: GoogleFonts.poppins(
+                    fontSize: screenWidth * 0.04,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
+}
 
-  // IMPROVED: Better action section with multiple options
-  Widget _buildActionSection(double screenWidth, double screenHeight) {
-    return Column(
-      children: [
-        // Primary share button
-        Container(
-          width: double.infinity,
-          margin: EdgeInsets.only(bottom: screenHeight * 0.02),
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              final pantunText = widget.pantunData['pantun'] ?? 'No pantun available';
-              Share.share(
-                '$pantunText\n\n~ Traditional Malay Poetry ~',
-                subject: 'Beautiful Pantun to Share',
-              );
-            },
-            icon: const Icon(Icons.share, color: Colors.white, size: 22),
-            label: Text(
-              "Share this Pantun",
-              style: GoogleFonts.poppins(
-                fontSize: screenWidth * 0.044,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-                letterSpacing: 0.5,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: darkTealButton,
-              padding: EdgeInsets.symmetric(
-                horizontal: screenWidth * 0.08,
-                vertical: screenHeight * 0.02,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-              elevation: 5,
-              shadowColor: Colors.black.withOpacity(0.3),
-            ),
-          ),
-        ),
+// Custom painter for batik pattern background
+class BatikPatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFE8F4FD).withOpacity(0.3)
+      ..style = PaintingStyle.fill;
+
+    final circlePaint = Paint()
+      ..color = const Color(0xFFBDE3FF).withOpacity(0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    // Draw subtle geometric pattern
+    for (double x = 0; x < size.width; x += 80) {
+      for (double y = 0; y < size.height; y += 80) {
+        // Draw small circles
+        canvas.drawCircle(Offset(x + 20, y + 20), 8, circlePaint);
+        canvas.drawCircle(Offset(x + 60, y + 60), 6, circlePaint);
         
-        // IMPROVED: Additional action buttons
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildSecondaryAction(
-              icon: Icons.favorite_border,
-              label: "Like",
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Added to favorites!',
-                      style: GoogleFonts.poppins(),
-                    ),
-                    backgroundColor: darkTealButton,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
-              },
-              screenWidth: screenWidth,
-            ),
-            _buildSecondaryAction(
-              icon: Icons.copy,
-              label: "Copy",
-              onPressed: () {
-                // Add copy functionality here
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Pantun copied to clipboard!',
-                      style: GoogleFonts.poppins(),
-                    ),
-                    backgroundColor: darkTealButton,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
-              },
-              screenWidth: screenWidth,
-            ),
-            _buildSecondaryAction(
-              icon: Icons.download,
-              label: "Save",
-              onPressed: () {
-                // Add save functionality here
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Pantun saved!',
-                      style: GoogleFonts.poppins(),
-                    ),
-                    backgroundColor: darkTealButton,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                );
-              },
-              screenWidth: screenWidth,
-            ),
-          ],
-        ),
-      ],
-    );
+        // Draw small rectangles
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset(x + 40, y + 10), width: 12, height: 4),
+            const Radius.circular(2),
+          ),
+          paint,
+        );
+        
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset(x + 10, y + 50), width: 4, height: 12),
+            const Radius.circular(2),
+          ),
+          paint,
+        );
+      }
+    }
   }
 
-  // IMPROVED: Secondary action buttons
-  Widget _buildSecondaryAction({
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    required double screenWidth,
-  }) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: screenWidth * 0.05,
-          vertical: 12,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: goldText.withOpacity(0.4),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: goldText,
-              size: 20,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                color: goldText,
-                fontSize: screenWidth * 0.03,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
