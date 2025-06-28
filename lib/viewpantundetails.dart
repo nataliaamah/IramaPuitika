@@ -33,9 +33,15 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
 
   bool _isSharePressed = false;
 
+  // Lexicon sets for keyword coloring
+  Set<String> joyKeywords = {};
+  Set<String> sadnessKeywords = {};
+  Set<String> angerKeywords = {};
+
   @override
   void initState() {
     super.initState();
+    loadAllLexicons(); // Load keywords for coloring
 
     // Initialize animations
     _fadeController = AnimationController(
@@ -79,6 +85,46 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     _slideController.forward();
   }
 
+  // --- Lexicon Loading for Keyword Coloring ---
+  Future<void> loadAllLexicons() async {
+    try {
+      joyKeywords = await _loadEmotionKeywords("assets/txt/joy-NRC-Emotion-Lexicon.txt");
+      sadnessKeywords = await _loadEmotionKeywords("assets/txt/sadness-NRC-Emotion-Lexicon.txt");
+      angerKeywords = await _loadEmotionKeywords("assets/txt/anger-NRC-Emotion-Lexicon.txt");
+      if (mounted) {
+        setState(() {}); // Rebuild with loaded keywords
+      }
+    } catch (e) {
+      // ignore: avoid_print
+      print("Error loading lexicons: $e");
+    }
+  }
+
+  Future<Set<String>> _loadEmotionKeywords(String filePath) async {
+    final String content = await rootBundle.loadString(filePath);
+    return content
+        .split('\n')
+        .map((line) => line.split(RegExp(r'\s+')).first.trim().toLowerCase())
+        .where((word) => word.isNotEmpty)
+        .toSet();
+  }
+
+  // --- Keyword Chip Coloring ---
+  Color _getColorForKeyword(String keyword) {
+    final lowerKeyword = keyword.toLowerCase();
+    if (joyKeywords.contains(lowerKeyword)) {
+      return const Color.fromARGB(255, 218, 165, 32); // Happy/Joy color
+    }
+    if (sadnessKeywords.contains(lowerKeyword)) {
+      return const Color.fromARGB(255, 80, 100, 150); // Sad color
+    }
+    if (angerKeywords.contains(lowerKeyword)) {
+      return const Color.fromARGB(255, 190, 50, 50); // Angry color
+    }
+    // Default color if not found in any lexicon
+    return accentColor;
+  }
+
   @override
   void dispose() {
     _fadeController.dispose();
@@ -100,6 +146,7 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     pantunText = pantunText.replaceAll(RegExp(r';\s+'), ';\n');
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: backgroundColor, // This is the fallback color if the image doesn't load
       appBar: _buildAppBar(),
       body: Stack(
@@ -184,22 +231,26 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      leading: Container(
-        margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: primaryText, size: 20),
-          onPressed: () => Navigator.pop(context),
+      leading: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Color(0xFF003E4C).withOpacity(0.8),
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                offset: const Offset(0, 2),
+                blurRadius: 8,
+                color: Colors.black.withOpacity(0.2),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.arrow_back_rounded,
+            color: Color(0xFFEAD7A6),
+            size: 22,
+          ),
         ),
       ),
       actions: [
@@ -215,10 +266,6 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
                 offset: const Offset(0, 2),
               ),
             ],
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.more_horiz, color: primaryText, size: 20),
-            onPressed: () {},
           ),
         ),
       ],
@@ -262,8 +309,6 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
         ),
         child: Column(
           children: [
-            // Header with trending badge
-            _buildCardHeader(screenWidth),
             
             // Pantun text section
             _buildPantunSection(pantunText, screenWidth, screenHeight),
@@ -284,83 +329,18 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     );
   }
 
-  Widget _buildCardHeader(double screenWidth) {
-    return Container(
-      padding: EdgeInsets.all(screenWidth * 0.05),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: accentColor,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.trending_up, color: Colors.white, size: 14),
-                const SizedBox(width: 4),
-                Text(
-                  'Traditional',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: screenWidth * 0.03,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          Text(
-            '2 Days Ago',
-            style: GoogleFonts.poppins(
-              color: secondaryText,
-              fontSize: screenWidth * 0.032,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPantunSection(String pantunText, double screenWidth, double screenHeight) {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: screenWidth * 0.06,
-        vertical: screenHeight * 0.02,
+        vertical: screenHeight * 0.06,
       ),
       child: Column(
         children: [
           Text(
-            'Beautiful Traditional Pantun',
-            style: GoogleFonts.poppins(
-              fontSize: screenWidth * 0.055,
-              fontWeight: FontWeight.w700,
-              color: primaryText,
-              height: 1.3,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          SizedBox(height: screenHeight * 0.025),
-          
-          // Pantun text with quote styling
-          Container(
-            padding: EdgeInsets.all(screenWidth * 0.04),
-            decoration: BoxDecoration(
-              color: backgroundColor.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: accentColor.withOpacity(0.1),
-                width: 1,
-              ),
-            ),
-            child: Text(
               '"$pantunText"',
               style: GoogleFonts.crimsonText(
-                fontSize: screenWidth * 0.045,
+                fontSize: screenWidth * 0.055,
                 fontWeight: FontWeight.w500,
                 color: primaryText,
                 height: 1.6,
@@ -368,7 +348,6 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
               ),
               textAlign: TextAlign.center,
             ),
-          ),
         ],
       ),
     );
@@ -475,16 +454,17 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
   }
 
   Widget _buildKeywordChip(String keyword, double screenWidth) {
+    final Color keywordColor = _getColorForKeyword(keyword);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: screenWidth * 0.03,
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: accentColor.withOpacity(0.1),
+        color: keywordColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: accentColor.withOpacity(0.3),
+          color: keywordColor.withOpacity(0.3),
           width: 1,
         ),
       ),
@@ -493,7 +473,7 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
         style: GoogleFonts.poppins(
           fontSize: screenWidth * 0.032,
           fontWeight: FontWeight.w500,
-          color: accentColor.withOpacity(0.8),
+          color: keywordColor.withOpacity(0.9),
         ),
       ),
     );
@@ -525,11 +505,11 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
               horizontal: screenWidth * 0.06,
             ),
             decoration: BoxDecoration(
-              color: accentColor,
+              color: Color(0xFF003E4C),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: accentColor.withOpacity(0.3),
+                  color: Color(0xFF003E4C).withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
