@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:animate_do/animate_do.dart';
 import 'viewpantundetails.dart'; // Assuming this is your detail screen
+import 'onboarding_screen.dart'; // Import the onboarding screen
 
 // Updated colors to match HomePage theme
 const Color goldText = Color(0xFFEAD7A6); // Matching HomePage goldText
@@ -58,7 +59,7 @@ class _ResultScreenState extends State<ResultScreen>
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-        backgroundColor: Color.fromARGB(255, 58, 95, 101), // Matching HomePage background
+        backgroundColor: const Color.fromARGB(255, 76, 123, 101), // Matching HomePage background
         extendBodyBehindAppBar: true, // Add this line
         appBar: _buildAppBar(screenWidth),
         body: Stack(
@@ -331,7 +332,14 @@ class _ResultScreenState extends State<ResultScreen>
       backgroundColor: Colors.transparent,
       iconTheme: IconThemeData(color: goldText),
       leading: GestureDetector(
-        onTap: () => Navigator.pop(context),
+        onTap: () {
+          // Navigate to a fresh OnboardingScreen and clear the history up to the first screen.
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+            (Route<dynamic> route) => route.isFirst,
+          );
+        },
         child: Container(
           margin: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -483,8 +491,8 @@ class _ResultScreenState extends State<ResultScreen>
                     // Subtle tap indicator
                     if (!isDimmed)
                       Positioned(
-                        bottom: 100, // Keep original position
-                        right: 15, // Keep original position
+                        bottom: 100,
+                        right: 15,
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(

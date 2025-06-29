@@ -106,7 +106,8 @@ class _PantunDetailScreenState extends State<PantunDetailScreen>
     }
 
     final String promptText = """
-You are a masterful storyteller and an expert in Malay pantun. Your task is to reveal the deep meaning of a pantun's core message (the isi) in a way that is both beautiful and easy to understand.
+You are a masterful storyteller and an expert in Malay pantun. Your task is to reveal the deep meaning of 
+a pantun's core message (the isi) in a way that is both beautiful and easy to understand.
 
 **Instructions:**
 1.  **Focus on the Core Message:** Analyze only the isi (lines 3-4).
@@ -117,7 +118,8 @@ You are a masterful storyteller and an expert in Malay pantun. Your task is to r
 
 **Example:**
 - Pantun: "Pulau Pandan jauh ke tengah, Gunung Daik bercabang tiga; Hancur badan dikandung tanah, Budi yang baik dikenang juga."
-- Interpretation: This pantun teaches that our physical life is fleeting, but the legacy of our kindness and good character endures forever, remembered by all.
+- Interpretation: This pantun teaches that our physical life is fleeting, but the legacy of our 
+kindness and good character endures forever, remembered by all.
 
 **Your Task:**
 Provide an interpretation for this pantun: "$pantun"
@@ -141,7 +143,7 @@ Provide an interpretation for this pantun: "$pantun"
           }
         }),
       );
-
+      debugPrint('response body: ${response.body}'); // Debugging line to check response body
       if (mounted) {
         if (response.statusCode == 200) {
           final result = jsonDecode(response.body);
@@ -566,7 +568,7 @@ Provide an interpretation for this pantun: "$pantun"
     if (allKeywords.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
